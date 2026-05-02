@@ -99,6 +99,12 @@ export default defineType({
       description: '标记为精选文章将在首页优先展示',
     }),
     defineField({
+      name: 'order',
+      title: '排序号',
+      type: 'number',
+      description: '数字越大越靠前，如 111 > 110 > 109。这个数字会显示在文章列表的编号',
+    }),
+    defineField({
       name: 'series',
       title: '所属系列',
       type: 'reference',

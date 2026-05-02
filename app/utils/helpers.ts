@@ -61,12 +61,13 @@ export function generateExcerpt(content?: any[], maxLength: number = 150): strin
  * 获取文章列表的 GROQ 查询
  */
 export function getArticlesQuery(limit: number = 10, start: number = 0): string {
-  return `*[_type == "article" && publishedAt <= now()] | order(publishedAt desc) [${start}...${start + limit}] {
+  return `*[_type == "article" && publishedAt <= now()] | order(order desc, publishedAt desc) [${start}...${start + limit}] {
     _id,
     title,
     slug,
     excerpt,
     coverImage,
+    "order": coalesce(order, 0),
     "category": category->title,
     "categorySlug": category->slug.current,
     "tags": tags[]->title,

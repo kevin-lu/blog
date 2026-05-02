@@ -86,6 +86,7 @@ export interface ArticleListItem {
   slug: { current: string }
   excerpt?: string
   coverImage?: Article['coverImage']
+  order?: number
   category: string
   categorySlug: string
   tags?: string[]

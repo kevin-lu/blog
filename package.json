@@ -1,0 +1,27 @@
+{
+  "name": "my-blog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^2.15.0",
+    "@sanity/image-url": "^1.0.2",
+    "@sanity/vision": "^3.40.0",
+    "groq": "^3.40.0",
+    "nuxt": "^3.11.0",
+    "sanity": "^3.40.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/sanity": "^1.9.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  }
+}

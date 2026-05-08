@@ -8,8 +8,8 @@ export default defineConfig({
   name: 'default',
   title: 'My Blog',
 
-  projectId: process.env.SANITY_PROJECT_ID || 'your-project-id',
-  dataset: process.env.SANITY_DATASET || 'production',
+  projectId: '3137me78',
+  dataset: 'production',
 
   plugins: [
     structureTool({ structure }),

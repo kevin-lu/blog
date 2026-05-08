@@ -30,6 +30,7 @@
         <NuxtLink
           :to="`/posts/${article.slug.current}`"
           class="flex items-start gap-4 py-3 px-3 -mx-3 rounded-lg hover:bg-gray-50 transition-colors group"
+          @click="() => console.log('Clicked article:', article.slug.current)"
         >
           <!-- 编号 -->
           <span class="flex-shrink-0 w-10 text-sm text-gray-300 group-hover:text-gray-400">
@@ -64,7 +65,7 @@
 <script setup lang="ts">
 import type { ArticleListItem } from '~/types'
 
-const { fetchArticles, fetchSiteSettings } = useSanity()
+const { fetchArticles, fetchSiteSettings } = useBlogData()
 
 // 获取站点设置
 const { data: siteSettings } = await useAsyncData('siteSettings', () => fetchSiteSettings())
@@ -80,6 +81,8 @@ const { data: initialArticles, pending } = await useAsyncData('articles', () => 
 
 if (initialArticles.value) {
   articles.value = initialArticles.value
+  console.log('Articles loaded:', articles.value)
+  console.log('First article slug:', articles.value[0]?.slug)
   hasMore.value = initialArticles.value.length === pageSize
 }
 

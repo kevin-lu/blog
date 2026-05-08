@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { fetchArticlesByTag } = useSanity()
+const { fetchArticlesByTag } = useBlogData()
 
 const tagName = computed(() => route.params.name as string)
 

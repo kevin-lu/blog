@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-const { data: siteSettings } = await useAsyncData('siteSettings', () => useSanity().fetchSiteSettings())
+const { data: siteSettings } = await useAsyncData('siteSettings', () => useBlogData().fetchSiteSettings())
 
 const currentYear = new Date().getFullYear()
 const siteTitle = computed(() => siteSettings.value?.title || '我的博客')

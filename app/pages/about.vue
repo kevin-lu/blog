@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-const { fetchSiteSettings } = useSanity()
+const { fetchSiteSettings } = useBlogData()
 
 const { data: siteSettings } = await useAsyncData('about', () => fetchSiteSettings())
 

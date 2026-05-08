@@ -34,6 +34,7 @@ export interface Article {
     slug: { current: string }
   }
   readingTime?: number
+  order?: number
 }
 
 // 分类类型

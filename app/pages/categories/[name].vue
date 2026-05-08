@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { fetchArticlesByCategory } = useSanity()
+const { fetchArticlesByCategory } = useBlogData()
 
 const categoryName = computed(() => route.params.name as string)
 

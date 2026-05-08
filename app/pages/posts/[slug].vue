@@ -1,6 +1,12 @@
 <template>
   <div class="max-w-4xl mx-auto px-6 py-8">
-    <article v-if="article">
+    <!-- 加载中 -->
+    <div v-if="pending" class="text-center py-20">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
+      <p class="mt-4 text-gray-500">加载中...</p>
+    </div>
+
+    <article v-else-if="article">
       <!-- 返回链接 -->
       <NuxtLink to="/" class="inline-flex items-center gap-1 text-gray-400 hover:text-gray-600 mb-6 transition-colors">
         <span>←</span>
@@ -19,27 +25,89 @@
           <time :datetime="article.publishedAt">
             {{ formatDate(article.publishedAt) }}
           </time>
-          <span v-if="article.category" class="text-gray-500">
+          <NuxtLink
+            v-if="article.category"
+            :to="`/categories/${article.category.slug.current}`"
+            class="text-gray-500 hover:text-accent transition-colors"
+          >
             {{ article.category.title }}
-          </span>
+          </NuxtLink>
           <span v-if="article.readingTime">
             {{ article.readingTime }} 分钟阅读
           </span>
+          <span v-if="article.updatedAt" class="text-gray-400">
+            更新于 {{ formatDate(article.updatedAt) }}
+          </span>
+        </div>
+
+        <!-- 标签 -->
+        <div v-if="article.tags?.length" class="flex flex-wrap gap-2 mt-3">
+          <NuxtLink
+            v-for="tag in article.tags"
+            :key="tag._id"
+            :to="`/tags/${tag.slug.current}`"
+            class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+          >
+            {{ tag.title }}
+          </NuxtLink>
         </div>
       </header>
 
       <!-- 封面图 -->
       <SanityImage
-        v-if="article.coverImage"
+        v-if="article?.coverImage"
         :asset-id="article.coverImage.asset._ref"
         class="w-full aspect-video object-cover rounded-xl mb-8"
         :alt="article.title"
       />
 
+      <!-- 目录 -->
+      <ClientOnly>
+        <details v-if="headings.length > 0" class="mb-8 bg-gray-50 rounded-lg p-4">
+          <summary class="text-sm font-medium text-gray-700 cursor-pointer list-none flex items-center justify-between">
+            <span>目录</span>
+            <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </summary>
+          <ul class="mt-3 space-y-2 text-sm">
+            <li v-for="heading in headings" :key="heading.id">
+              <a
+                :href="`#${heading.id}`"
+                class="block text-gray-500 hover:text-accent transition-colors"
+                :class="{ 'pl-4': heading.level === 3 }"
+                @click.prevent="scrollToHeading(heading.id)"
+              >
+                {{ heading.text }}
+              </a>
+            </li>
+          </ul>
+        </details>
+      </ClientOnly>
+
       <!-- 正文内容 -->
-      <div class="prose prose-gray max-w-none">
+      <div v-if="article?.content" class="prose prose-gray max-w-none">
         <ArticleContent :content="article.content" />
       </div>
+
+      <!-- 系列文章导航 -->
+      <ClientOnly>
+        <SeriesNavigation
+          v-if="article?.series"
+          :series-slug="article.series.slug.current"
+          :series-title="article.series.title"
+          :current-article-id="article._id"
+        />
+      </ClientOnly>
+
+      <!-- 相关文章推荐 -->
+      <ClientOnly>
+        <RelatedArticles
+          :article-id="article._id"
+          :category-slug="article.category?.slug?.current"
+          :tags="article.tags"
+        />
+      </ClientOnly>
 
       <!-- 底部导航 -->
       <nav class="mt-12 pt-6 border-t border-gray-200">
@@ -63,15 +131,127 @@
 
 <script setup lang="ts">
 import { formatDate } from '~/utils/helpers'
+import type { ArticleDetail } from '~/types'
+
+definePageMeta({
+  ssr: false
+})
 
 const route = useRoute()
-const { fetchArticleBySlug } = useSanity()
+const { fetchArticleBySlug } = useBlogData()
 
-const slug = route.params.slug as string
+console.log('Route params:', route.params)
+console.log('Route path:', route.path)
 
-const { data: article } = await useAsyncData(`article-${slug}`, () => fetchArticleBySlug(slug))
+const slug = computed(() => route.params.slug as string)
 
-// SEO
+console.log('Slug value:', slug.value)
+
+const { data: article, pending } = await useAsyncData<ArticleDetail | null>(
+  `article-${slug.value}`,
+  () => fetchArticleBySlug(slug.value),
+  {
+    lazy: true,
+    default: () => null
+  }
+)
+
+// 调试日志
+watch(article, (newArticle) => {
+  console.log('Article data:', newArticle)
+  if (newArticle) {
+    console.log('Article content:', newArticle.content)
+  }
+}, { immediate: true })
+
+const headings = ref<{ id: string; text: string; level: number }[]>([])
+
+function generateId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function extractHeadings() {
+  if (!article.value?.content) return
+
+  const result: { id: string; text: string; level: number }[] = []
+
+  function traverse(blocks: any[]) {
+    for (const block of blocks) {
+      if (block._type === 'block') {
+        const style = block.style || 'normal'
+        if (style === 'h2' || style === 'h3') {
+          const text = block.children?.map((c: any) => c.text).join('') || ''
+          if (text) {
+            result.push({
+              id: generateId(text),
+              text,
+              level: style === 'h2' ? 2 : 3
+            })
+          }
+        }
+      }
+      if (block._type === 'block' && block.children) {
+        traverse(block.children)
+      }
+    }
+  }
+
+  traverse(article.value.content)
+  headings.value = result
+}
+
+function scrollToHeading(id: string) {
+  const element = document.getElementById(id)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    history.pushState(null, '', `#${id}`)
+  }
+}
+
+function addIdsToHeadings() {
+  if (!article.value?.content) return
+  
+  nextTick(() => {
+    const articleEl = document.querySelector('.prose')
+    if (!articleEl) return
+    
+    const domHeadings = articleEl.querySelectorAll('h2, h3')
+    let contentIndex = 0
+    
+    function traverse(blocks: any[]) {
+      for (const block of blocks) {
+        if (block._type === 'block') {
+          const style = block.style || 'normal'
+          if (style === 'h2' || style === 'h3') {
+            if (domHeadings[contentIndex]) {
+              const text = block.children?.map((c: any) => c.text).join('') || ''
+              domHeadings[contentIndex].id = generateId(text)
+              contentIndex++
+            }
+          }
+        }
+      }
+    }
+    
+    traverse(article.value?.content || [])
+  })
+}
+
+onMounted(() => {
+  extractHeadings()
+  addIdsToHeadings()
+})
+
+watch(() => article.value, () => {
+  nextTick(() => {
+    extractHeadings()
+    addIdsToHeadings()
+  })
+})
+
 useHead(() => {
   if (!article.value) return {}
   

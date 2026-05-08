@@ -1,7 +1,21 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  srcDir: 'app',
   modules: ['@nuxt/ui', '@nuxtjs/sanity'],
-  css: ['~/assets/css/main.css'],
+  
+  experimental: {
+    payloadExtraction: false,
+  },
+
+  vite: {
+    optimizeDeps: {
+      exclude: ['react-compiler-runtime', 'react', 'react-dom']
+    },
+    define: {
+      'process.env.DEBUG': 'false'
+    }
+  },
+
   sanity: {
     projectId: process.env.NUXT_PUBLIC_SANITY_PROJECT_ID,
     dataset: process.env.NUXT_PUBLIC_SANITY_DATASET || 'production',

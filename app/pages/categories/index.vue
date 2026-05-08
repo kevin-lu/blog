@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-const { fetchCategories } = useSanity()
+const { fetchCategories } = useBlogData()
 
 const { data: categories, pending, error } = await useAsyncData('categories', () => fetchCategories())
 

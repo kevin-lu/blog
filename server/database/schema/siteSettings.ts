@@ -1,12 +1,12 @@
-import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-export const siteSettings = pgTable('site_settings', {
-  id: serial('id').primaryKey(),
-  keyName: varchar('key_name', { length: 100 }).unique().notNull(),
+export const siteSettings = sqliteTable('site_settings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  keyName: text('key_name').notNull().unique(),
   keyValue: text('key_value'),
-  description: varchar('description', { length: 255 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  description: text('description'),
+  createdAt: text('created_at').$type<Date>(),
+  updatedAt: text('updated_at').$type<Date>(),
 });
 
 export type SiteSetting = typeof siteSettings.$inferSelect;

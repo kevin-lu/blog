@@ -1,13 +1,13 @@
-import { pgTable, serial, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-export const comments = pgTable('comments', {
-  id: serial('id').primaryKey(),
-  articleSlug: varchar('article_slug', { length: 100 }).notNull(),
-  githubId: varchar('github_id', { length: 50 }),
-  status: varchar('status', { length: 20 }).default('pending'),
-  isPinned: boolean('is_pinned').default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+export const comments = sqliteTable('comments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  articleSlug: text('article_slug').notNull(),
+  githubId: text('github_id'),
+  status: text('status').default('pending'),
+  isPinned: integer('is_pinned').default(0),
+  createdAt: text('created_at').$type<Date>(),
+  updatedAt: text('updated_at').$type<Date>(),
 });
 
 export type Comment = typeof comments.$inferSelect;

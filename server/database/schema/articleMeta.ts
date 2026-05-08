@@ -1,15 +1,15 @@
-import { pgTable, serial, varchar, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-export const articleMeta = pgTable('article_meta', {
-  id: serial('id').primaryKey(),
-  slug: varchar('slug', { length: 200 }).unique().notNull(),
-  title: varchar('title', { length: 200 }).notNull(),
+export const articleMeta = sqliteTable('article_meta', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
   description: text('description'),
-  coverImage: varchar('cover_image', { length: 255 }),
-  status: varchar('status', { length: 20 }).default('draft'),
-  publishedAt: timestamp('published_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  coverImage: text('cover_image'),
+  status: text('status').default('draft'),
+  publishedAt: text('published_at').$type<Date>(),
+  createdAt: text('created_at').$type<Date>(),
+  updatedAt: text('updated_at').$type<Date>(),
 });
 
 export type ArticleMeta = typeof articleMeta.$inferSelect;

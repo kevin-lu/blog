@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1778205546673,
-      "tag": "0000_furry_matthew_murdock",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778206483978,
-      "tag": "0001_youthful_night_nurse",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778206733435,
-      "tag": "0002_clever_catseye",
+      "version": "6",
+      "when": 1778218196369,
+      "tag": "0000_curious_lilandra",
       "breakpoints": true
     }
   ]

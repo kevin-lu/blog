@@ -1,34 +1,34 @@
-import { pgTable, serial, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
-export const categories = pgTable('categories', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 50 }).unique().notNull(),
-  slug: varchar('slug', { length: 50 }).unique().notNull(),
-  description: varchar('description', { length: 255 }),
-  parentId: integer('parent_id').references((): any => categories.id),
+export const categories = sqliteTable('categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  parentId: integer('parent_id'),
   sortOrder: integer('sort_order').default(0),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: text('created_at').$type<Date>(),
+  updatedAt: text('updated_at').$type<Date>(),
 });
 
-export const tags = pgTable('tags', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 50 }).unique().notNull(),
-  slug: varchar('slug', { length: 50 }).unique().notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+export const tags = sqliteTable('tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  createdAt: text('created_at').$type<Date>(),
+  updatedAt: text('updated_at').$type<Date>(),
 });
 
 // 文章和分类的多对多关系
-export const articleCategories = pgTable('article_categories', {
-  articleId: integer('article_id').notNull().references(() => articleMeta.id, { onDelete: 'cascade' }),
-  categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+export const articleCategories = sqliteTable('article_categories', {
+  articleId: integer('article_id').notNull(),
+  categoryId: integer('category_id').notNull(),
 });
 
 // 文章和标签的多对多关系
-export const articleTags = pgTable('article_tags', {
-  articleId: integer('article_id').notNull().references(() => articleMeta.id, { onDelete: 'cascade' }),
-  tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+export const articleTags = sqliteTable('article_tags', {
+  articleId: integer('article_id').notNull(),
+  tagId: integer('tag_id').notNull(),
 });
 
 export type Category = typeof categories.$inferSelect;

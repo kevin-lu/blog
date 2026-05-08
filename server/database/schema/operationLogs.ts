@@ -1,16 +1,16 @@
-import { pgTable, serial, varchar, integer, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 import { admins } from './admins';
 
-export const operationLogs = pgTable('operation_logs', {
-  id: serial('id').primaryKey(),
-  adminId: integer('admin_id').notNull().references(() => admins.id),
-  action: varchar('action', { length: 50 }).notNull(),
-  resource: varchar('resource', { length: 50 }),
+export const operationLogs = sqliteTable('operation_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  adminId: integer('admin_id').notNull(),
+  action: text('action').notNull(),
+  resource: text('resource'),
   resourceId: integer('resource_id'),
-  details: jsonb('details'),
-  ipAddress: varchar('ip_address', { length: 45 }),
-  userAgent: varchar('user_agent', { length: 255 }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  details: text('details'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: text('created_at').$type<Date>(),
 });
 
 export type OperationLog = typeof operationLogs.$inferSelect;

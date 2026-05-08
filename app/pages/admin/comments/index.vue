@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { ref, h, computed, onMounted } from 'vue';
-import type { DataTableColumns, SelectOption, NTag } from 'naive-ui';
+import type { DataTableColumns, SelectOption } from 'naive-ui';
 import { NButton, NTag, NPopconfirm, NIcon, NSpace } from 'naive-ui';
 import { CheckOutlined, CloseOutlined, DeleteOutlined } from '@vicons/antd';
 import { apiClient } from '~/utils/api';

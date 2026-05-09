@@ -106,30 +106,35 @@ onMounted(() => {
 
 .back-btn {
   font-size: 14px;
-  color: #666;
+  color: #18a058;
+  transition: all 0.2s;
 }
 
 .back-btn:hover {
-  color: #18a058;
+  color: #0c7a43;
+  background: rgba(24, 160, 88, 0.08);
 }
 
 .post-title {
   margin: 0 0 16px 0;
   font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
+  background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   line-height: 1.4;
 }
 
 .post-meta {
   margin-bottom: 40px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 2px solid rgba(24, 160, 88, 0.1);
 }
 
 .publish-date {
   font-size: 14px;
-  color: #999;
+  color: #18a058;
 }
 
 .post-body {

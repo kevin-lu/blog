@@ -67,8 +67,9 @@ const toggleMobileMenu = () => {
 }
 
 .header {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(24, 160, 88, 0.08);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -110,7 +111,10 @@ const toggleMobileMenu = () => {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #1a1a1a;
+  background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Desktop Nav */
@@ -128,20 +132,22 @@ const toggleMobileMenu = () => {
 .nav-link {
   padding: 8px 16px;
   text-decoration: none;
-  color: #666;
+  color: #333;
   border-radius: 6px;
   transition: all 0.2s;
   white-space: nowrap;
+  position: relative;
 }
 
 .nav-link:hover {
-  background-color: #f5f5f5;
-  color: #1a1a1a;
+  background-color: rgba(24, 160, 88, 0.08);
+  color: #18a058;
 }
 
 .nav-link.router-link-active {
-  background-color: #18a058;
+  background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.3);
 }
 
 /* Mobile Menu Button */

@@ -9,3 +9,19 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* 绿色渐变背景 */
+body {
+  background: linear-gradient(135deg, #f0f9f4 0%, #e6f5ed 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* 绿色主题色变量 */
+:root {
+  --primary-color: #18a058;
+  --primary-dark: #0c7a43;
+  --primary-light: #34c88a;
+  --bg-gradient-start: #f0f9f4;
+  --bg-gradient-end: #e6f5ed;
+}

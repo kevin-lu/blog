@@ -3,36 +3,25 @@
     <header class="header">
       <div class="container">
         <div class="header-left">
-          <router-link to="/" class="logo">
-            <h1>{{ siteName }}</h1>
-          </router-link>
+        <router-link to="/" class="logo">
+          <h1>{{ siteName }}</h1>
+        </router-link>
 
-          <!-- Desktop Nav -->
-          <nav class="nav desktop-nav">
-            <router-link to="/" class="nav-link">首页</router-link>
-            <router-link to="/categories" class="nav-link">分类</router-link>
-            <router-link to="/tags" class="nav-link">标签</router-link>
-            <router-link to="/about" class="nav-link">关于</router-link>
-          </nav>
+        <!-- Desktop Nav -->
+        <nav class="nav desktop-nav">
+          <router-link to="/" class="nav-link">首页</router-link>
+          <router-link to="/categories" class="nav-link">分类</router-link>
+          <router-link to="/tags" class="nav-link">标签</router-link>
+          <router-link to="/about" class="nav-link">关于</router-link>
+        </nav>
 
-          <!-- Mobile Menu Button -->
-          <n-button class="mobile-menu-btn" text @click="toggleMobileMenu">
-            <template #icon>
-              <n-icon :component="menuOpen ? CloseOutline : MenuOutline" size="24" />
-            </template>
-          </n-button>
-        </div>
-
-        <div class="header-right">
-          <n-button
-            v-if="!authStore.isAuthenticated"
-            text
-            @click="goToAdmin"
-          >
-            管理后台
-          </n-button>
-          <UserInfo v-else />
-        </div>
+        <!-- Mobile Menu Button -->
+        <n-button class="mobile-menu-btn" text @click="toggleMobileMenu">
+          <template #icon>
+            <n-icon :component="menuOpen ? CloseOutline : MenuOutline" size="24" />
+          </template>
+        </n-button>
+      </div>
       </div>
 
       <!-- Mobile Nav -->
@@ -60,23 +49,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { MenuOutline, CloseOutline } from '@vicons/ionicons5'
-import UserInfo from '@/components/common/UserInfo.vue'
-
-const router = useRouter()
-const authStore = useAuthStore()
 
 const menuOpen = ref(false)
 const siteName = computed(() => '我的博客')
 
 const toggleMobileMenu = () => {
   menuOpen.value = !menuOpen.value
-}
-
-const goToAdmin = () => {
-  router.push('/admin/login')
 }
 </script>
 
@@ -105,7 +84,6 @@ const goToAdmin = () => {
   height: 64px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
 .header-left,
@@ -113,6 +91,14 @@ const goToAdmin = () => {
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+.header-left {
+  width: 100%;
+}
+
+.header-right {
+  display: none;
 }
 
 .logo {

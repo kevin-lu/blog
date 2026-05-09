@@ -1,0 +1,52 @@
+{
+  "name": "blog-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.23.1",
+    "@tiptap/extension-highlight": "^3.23.1",
+    "@tiptap/extension-image": "^3.23.1",
+    "@tiptap/extension-link": "^3.23.1",
+    "@tiptap/extension-placeholder": "^3.23.1",
+    "@tiptap/extension-text-align": "^3.23.1",
+    "@tiptap/extension-typography": "^3.23.1",
+    "@tiptap/extension-underline": "^3.23.1",
+    "@tiptap/starter-kit": "^3.23.1",
+    "@tiptap/vue-3": "^3.23.1",
+    "@vicons/ionicons5": "^0.13.0",
+    "@vueuse/core": "^14.3.0",
+    "axios": "^1.16.0",
+    "naive-ui": "^2.44.1",
+    "pinia": "^3.0.4",
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@pinia/testing": "^1.0.3",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^20.0.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@vue/test-utils": "^2.4.10",
+    "autoprefixer": "^10.4.0",
+    "jsdom": "^24.1.3",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.8",
+    "vue-tsc": "^2.0.0"
+  }
+}

@@ -65,9 +65,14 @@ const loadArticle = async () => {
   loading.value = true
   try {
     const response = await articleApi.getDetail(route.params.slug as string)
-    article.value = response.article
+    if (response.success && response.data) {
+      article.value = response.data
+    } else {
+      article.value = null
+    }
   } catch (error) {
     console.error('Failed to load article:', error)
+    article.value = null
   } finally {
     loading.value = false
   }

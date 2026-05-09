@@ -1,0 +1,13 @@
+# Playwright
+playwright-report/
+test-results/
+.playwright/
+
+# Vitest
+coverage/
+
+# Test
+*.test.js.map
+*.spec.js.map
+*.test.ts.map
+*.spec.ts.map

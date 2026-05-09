@@ -39,5 +39,5 @@ export default defineNuxtConfig({
         lang: 'zh-CN'
       }
     }
-  }
+  },
 })

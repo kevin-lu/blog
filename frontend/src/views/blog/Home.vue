@@ -105,7 +105,7 @@ if (route.query.search) {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: white;
+  background: transparent;
   padding: 16px 0;
 }
 
@@ -117,6 +117,20 @@ if (route.query.search) {
 
 .search-bar .n-input {
   height: 48px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(24, 160, 88, 0.1);
+  border-radius: 24px;
+  transition: all 0.2s;
+}
+
+.search-bar .n-input:hover {
+  border-color: rgba(24, 160, 88, 0.3);
+}
+
+.search-bar .n-input:focus-within {
+  border-color: #18a058;
+  box-shadow: 0 0 0 3px rgba(24, 160, 88, 0.1);
 }
 
 @media (max-width: 768px) {

@@ -82,7 +82,7 @@ if (route.query.search) {
 .home-content {
   display: block;
   max-width: 900px;
-  margin: 0 auto;
+  margin: 0;
   padding: 0 20px;
 }
 

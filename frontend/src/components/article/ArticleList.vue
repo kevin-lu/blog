@@ -114,7 +114,8 @@ onMounted(() => {
 <style scoped>
 .article-list {
   max-width: 900px;
-  margin: 0 auto;
+  margin: 0;
+  padding-left: 0;
 }
 
 .loading,

@@ -130,10 +130,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: white;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(24, 160, 88, 0.1);
+  border: 1px solid rgba(24, 160, 88, 0.05);
 }
 
 .pagination {

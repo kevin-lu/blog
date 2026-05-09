@@ -49,18 +49,27 @@ const formatDate = (dateString: string | null) => {
   align-items: flex-start;
   gap: 16px;
   padding: 20px 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(24, 160, 88, 0.08);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+}
+
+.article-list-item:last-child {
+  border-bottom: none;
 }
 
 .article-list-item:hover {
-  background-color: #f9f9f9;
+  background: linear-gradient(90deg, rgba(24, 160, 88, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.article-list-item:active {
+  background: rgba(24, 160, 88, 0.08);
 }
 
 .article-id {
   font-size: 14px;
-  color: #999;
+  color: #18a058;
+  font-weight: 600;
   min-width: 32px;
   text-align: right;
 }
@@ -69,7 +78,7 @@ const formatDate = (dateString: string | null) => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #ddd;
+  background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
   margin-top: 8px;
   flex-shrink: 0;
 }

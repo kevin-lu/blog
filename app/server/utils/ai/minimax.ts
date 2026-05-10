@@ -25,7 +25,7 @@ interface MiniMaxResponse {
 export class MiniMaxAI {
   private apiKey: string;
   private model: string;
-  private baseUrl = 'https://api.minimaxi.chat/v1/chat/completions';
+  private baseUrl = process.env.MINIMAX_API_HOST || 'https://api.minimax.chat/v1/chat/completions';
 
   constructor(config: MiniMaxConfig) {
     this.apiKey = config.apiKey;

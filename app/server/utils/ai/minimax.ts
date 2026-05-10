@@ -55,7 +55,17 @@ export class MiniMaxAI {
       throw new Error(`MiniMax API 请求失败：${response.status} - ${error}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    // 过滤掉模型的思考标签
+    if (result.choices && result.choices[0]?.message?.content) {
+      let content = result.choices[0].message.content;
+      // 移除 <think> 和 </think> 标签及其内容
+      content = content.replace(new RegExp('<think>[\\s\\S]*?</</think>>', 'g'), '').trim();
+      result.choices[0].message.content = content;
+    }
+    
+    return result;
   }
 
   async rewriteArticle(content: string, prompts: {

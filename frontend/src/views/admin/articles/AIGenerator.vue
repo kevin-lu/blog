@@ -215,6 +215,18 @@ const columns: DataTableColumns = [
     },
   },
   {
+    title: '错误信息',
+    key: 'error',
+    width: 250,
+    ellipsis: { tooltip: true },
+    render: (row: any) => {
+      if (row.status === 'failed' && row.error) {
+        return h('span', { style: { color: '#ff4d4f' } }, row.error)
+      }
+      return '-'
+    },
+  },
+  {
     title: '源 URL',
     key: 'sourceUrl',
     width: 200,

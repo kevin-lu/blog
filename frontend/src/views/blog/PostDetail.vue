@@ -162,16 +162,100 @@ onMounted(() => {
   margin: 16px 0;
 }
 
+/* 代码块样式 */
 .post-body :deep(pre) {
-  background: #f5f5f5;
-  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  border-left: 4px solid #18a058;
   border-radius: 8px;
+  padding: 16px 20px;
+  margin: 20px 0;
   overflow-x: auto;
-  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.1);
 }
 
 .post-body :deep(code) {
-  font-family: 'Fira Code', monospace;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
   font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* 引用块样式 */
+.post-body :deep(blockquote) {
+  background: rgba(24, 160, 88, 0.05);
+  border-left: 4px solid #18a058;
+  padding: 16px 20px;
+  margin: 20px 0;
+  color: #555;
+  font-style: italic;
+  border-radius: 0 8px 8px 0;
+}
+
+/* 标题样式 */
+.post-body :deep(h2) {
+  font-size: 24px;
+  font-weight: 700;
+  color: #18a058;
+  margin: 40px 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(24, 160, 88, 0.2);
+}
+
+.post-body :deep(h3) {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0c7a43;
+  margin: 30px 0 15px 0;
+}
+
+/* 表格样式 */
+.post-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.1);
+}
+
+.post-body :deep(th) {
+  background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
+  color: white;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.post-body :deep(td) {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.post-body :deep(tr:nth-child(even)) {
+  background: rgba(24, 160, 88, 0.02);
+}
+
+.post-body :deep(tr:hover) {
+  background: rgba(24, 160, 88, 0.05);
+}
+
+/* 列表样式 */
+.post-body :deep(ul),
+.post-body :deep(ol) {
+  padding-left: 24px;
+  margin: 16px 0;
+}
+
+.post-body :deep(li) {
+  margin: 8px 0;
+  line-height: 1.8;
+}
+
+/* 重点内容加粗 */
+.post-body :deep(strong),
+.post-body :deep(b) {
+  color: #18a058;
+  font-weight: 600;
 }
 </style>

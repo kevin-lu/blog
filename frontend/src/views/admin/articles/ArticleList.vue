@@ -304,7 +304,7 @@ const loadArticles = async () => {
     if (filters.category) params.category = filters.category
 
     const response = await adminArticleApi.getList(params)
-    if (response.data && response.data.data) {
+    if (response.data) {
       articles.value = response.data.data
       pagination.page = response.data.page || 1
       pagination.pageSize = response.data.pageSize || 20

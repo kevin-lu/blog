@@ -79,7 +79,7 @@ export const authApi = {
         token: string; 
         admin: { id: number; username: string; email: string; avatar: string | null; role: string } 
       }
-    }>('auth/login', {
+    }>('admin/auth/login', {
       username,
       password,
     })
@@ -92,15 +92,15 @@ export const authApi = {
   },
 
   logout() {
-    return apiClient.post<{ message: string }>('auth/logout')
+    return apiClient.post<{ message: string }>('admin/auth/logout')
   },
 
   refresh() {
-    return apiClient.post<{ access_token: string }>('auth/refresh')
+    return apiClient.post<{ access_token: string }>('admin/auth/refresh')
   },
 
   getCurrentUser() {
-    return apiClient.get<{ user: User }>('auth/me')
+    return apiClient.get<{ user: User }>('admin/auth/me')
   },
 }
 

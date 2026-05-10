@@ -50,24 +50,24 @@ export const articleApi = {
 
 // 后台管理 API 客户端（需要认证）
 export const adminArticleApi = {
-  getList(params?: { page?: number; limit?: number; category?: string; tag?: string; search?: string; status?: string }) {
-    return apiClient.get<ArticlesResponse>('/articles', { params })
+  getList(params?: { page?: number; pageSize?: number; category?: string; tag?: string; search?: string; status?: string }) {
+    return apiClient.get<ArticlesResponse>('/admin/articles', { params })
   },
 
   getDetail(slug: string) {
-    return apiClient.get<{ success: boolean; data: Article }>(`/articles/${slug}`)
+    return apiClient.get<{ success: boolean; data: Article }>(`/admin/articles/${slug}`)
   },
 
   create(data: Partial<Article>) {
-    return apiClient.post<{ success: boolean; data: { article: Article } }>('/articles', data)
+    return apiClient.post<{ success: boolean; data: { article: Article } }>('/admin/articles', data)
   },
 
   update(slug: string, data: Partial<Article>) {
-    return apiClient.put<{ success: boolean; data: { article: Article } }>(`/articles/${slug}`, data)
+    return apiClient.put<{ success: boolean; data: { article: Article } }>(`/admin/articles/${slug}`, data)
   },
 
   delete(slug: string) {
-    return apiClient.delete<{ success: boolean; message: string }>(`/articles/${slug}`)
+    return apiClient.delete<{ success: boolean; message: string }>(`/admin/articles/${slug}`)
   },
 }
 

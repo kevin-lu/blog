@@ -90,7 +90,7 @@ import {
   EyeOutline,
 } from '@vicons/ionicons5'
 import type { Article } from '@/types'
-import { adminArticleApi, adminCategoryApi } from '@/api'
+import { adminArticleApi, adminCategoryApi, articleApi } from '@/api'
 
 interface ArticleWithMeta extends Article {
   categories?: any[]
@@ -119,6 +119,22 @@ const statusOptions = [
 ]
 
 const categoryOptions = ref<any[]>([])
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50],
+  onChange: (page: number) => {
+    pagination.page = page
+    loadArticles()
+  },
+  onUpdatePageSize: (pageSize: number) => {
+    pagination.pageSize = pageSize
+    pagination.page = 1
+    loadArticles()
+  },
+})
 
 const rowKey = (row: Article) => row.id
 
@@ -264,7 +280,7 @@ const confirmDelete = async () => {
   if (!deleteArticle.value) return
 
   try {
-    await articleApi.delete(deleteArticle.value.slug)
+    await adminArticleApi.delete(deleteArticle.value.slug)
     message.success('删除成功')
     loadArticles()
   } catch (error) {
@@ -280,16 +296,19 @@ const loadArticles = async () => {
   loading.value = true
   try {
     const params: any = {
-      page: 1,
-      limit: 20,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
     }
     if (filters.search) params.search = filters.search
     if (filters.status) params.status = filters.status
     if (filters.category) params.category = filters.category
 
     const response = await adminArticleApi.getList(params)
-    articles.value = response.data.data
-    // TODO: 处理分页
+    if (response.data && response.data.data) {
+      articles.value = response.data.data
+      pagination.page = response.data.page || 1
+      pagination.pageSize = response.data.pageSize || 20
+    }
   } catch (error) {
     console.error('Failed to load articles:', error)
     message.error('加载文章失败')

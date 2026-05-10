@@ -10,6 +10,8 @@ interface AITask {
   articleId?: number;
   articleSlug?: string;
   error?: string;
+  message?: string;
+  progress?: number;
   tokenUsage?: number;
   cost?: number;
   createdAt: Date;
@@ -24,6 +26,7 @@ export function createAITask(task: Omit<AITask, 'id' | 'createdAt'>): AITask {
     ...task,
     id,
     createdAt: new Date(),
+    progress: 0,
   };
   tasks.set(id, newTask);
   return newTask;
@@ -46,4 +49,17 @@ export function listAITasks(limit = 20): AITask[] {
   return Array.from(tasks.values())
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, limit);
+}
+
+export function deleteAITask(taskId: string): boolean {
+  return tasks.delete(taskId);
+}
+
+export function clearCompletedTasks(): number {
+  const completedTaskIds = Array.from(tasks.entries())
+    .filter(([_, task]) => task.status === 'completed' || task.status === 'failed')
+    .map(([id, _]) => id);
+  
+  completedTaskIds.forEach(id => tasks.delete(id));
+  return completedTaskIds.length;
 }

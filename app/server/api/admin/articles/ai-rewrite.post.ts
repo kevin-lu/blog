@@ -73,11 +73,25 @@ async function processAIRewrite(
 ) {
   try {
     // 步骤 1: 抓取文章
-    updateAITask(taskId, { status: 'processing' });
+    updateAITask(taskId, { 
+      status: 'processing',
+      progress: 10,
+      message: '正在抓取文章内容...',
+    });
     const scraped = await scrapeWechatArticle(sourceUrl);
+    
+    updateAITask(taskId, { 
+      progress: 30,
+      message: '文章内容抓取成功，正在转换格式...',
+    });
 
     // 步骤 2: 转换为 Markdown
     const markdownContent = htmlToMarkdown(scraped.content);
+    
+    updateAITask(taskId, { 
+      progress: 50,
+      message: '正在调用 AI 改写...',
+    });
 
     // 步骤 3: 调用 AI 改写
     const apiKey = process.env.MINIMAX_API_KEY;
@@ -93,7 +107,17 @@ async function processAIRewrite(
       layoutPrompt: promptsData.layout,
     };
     
+    updateAITask(taskId, { 
+      progress: 60,
+      message: 'AI 正在分析文章结构...',
+    });
+    
     const result = await ai.rewriteArticle(markdownContent, prompts);
+    
+    updateAITask(taskId, { 
+      progress: 80,
+      message: '正在保存文章...',
+    });
 
     // 步骤 4: 保存文章
     const slug = slugify(scraped.title) + '-' + Date.now();
@@ -118,6 +142,8 @@ async function processAIRewrite(
     // 更新任务状态
     updateAITask(taskId, {
       status: 'completed',
+      progress: 100,
+      message: '任务完成',
       articleId: article[0].id,
       articleSlug: slug,
       tokenUsage: result.tokenUsage,
@@ -126,9 +152,12 @@ async function processAIRewrite(
     });
 
   } catch (error: any) {
+    console.error('AI 改写失败:', error);
     updateAITask(taskId, {
       status: 'failed',
-      error: error.message,
+      progress: 0,
+      error: error.message || '未知错误',
+      message: `执行失败：${error.message}`,
       completedAt: new Date(),
     });
     throw error;

@@ -6,12 +6,17 @@
         <p>查看和管理 AI 改写任务进度</p>
       </div>
       <div class="header-right">
-        <n-button type="primary" @click="loadTasks" :loading="loading">
-          <template #icon>
-            <n-icon :component="RefreshOutline" />
-          </template>
-          刷新
-        </n-button>
+        <n-space>
+          <n-button type="primary" @click="loadTasks" :loading="loading">
+            <template #icon>
+              <n-icon :component="RefreshOutline" />
+            </template>
+            刷新
+          </n-button>
+          <n-button @click="clearCompletedTasks">
+            清理已完成
+          </n-button>
+        </n-space>
       </div>
     </div>
 
@@ -21,9 +26,17 @@
         <template #header>
           <n-space justify="space-between" align="center">
             <span>任务列表</span>
-            <n-tag :type="runningTasks > 0 ? 'warning' : 'success'">
-              进行中：{{ runningTasks }}
-            </n-tag>
+            <n-space>
+              <n-tag :type="runningTasks > 0 ? 'warning' : 'success'">
+                进行中：{{ runningTasks }}
+              </n-tag>
+              <n-tag :type="failedTasks > 0 ? 'error' : 'success'">
+                失败：{{ failedTasks }}
+              </n-tag>
+              <n-tag type="success">
+                成功：{{ completedTasks }}
+              </n-tag>
+            </n-space>
           </n-space>
         </template>
 
@@ -38,7 +51,7 @@
     </n-space>
 
     <!-- 任务详情弹窗 -->
-    <n-modal v-model:show="showDetailModal" preset="card" title="任务详情" style="width: 600px;">
+    <n-modal v-model:show="showDetailModal" preset="card" title="任务详情" style="width: 700px;">
       <n-space vertical v-if="currentTask">
         <n-descriptions bordered :column="2">
           <n-descriptions-item label="任务 ID">
@@ -50,13 +63,16 @@
             </n-tag>
           </n-descriptions-item>
           <n-descriptions-item label="源 URL" :span="2">
-            {{ currentTask.sourceUrl || '无' }}
+            <n-a :href="currentTask.sourceUrl" target="_blank" v-if="currentTask.sourceUrl">
+              {{ currentTask.sourceUrl }}
+            </n-a>
+            <span v-else>无</span>
           </n-descriptions-item>
           <n-descriptions-item label="改写策略">
-            {{ currentTask.rewriteStrategy || 'standard' }}
+            {{ getStrategyText(currentTask.rewriteStrategy) }}
           </n-descriptions-item>
           <n-descriptions-item label="模板类型">
-            {{ currentTask.templateType || 'tutorial' }}
+            {{ getTemplateText(currentTask.templateType) }}
           </n-descriptions-item>
           <n-descriptions-item label="创建时间" :span="2">
             {{ formatDate(currentTask.createdAt) }}
@@ -64,16 +80,36 @@
           <n-descriptions-item label="完成时间" :span="2" v-if="currentTask.completedAt">
             {{ formatDate(currentTask.completedAt) }}
           </n-descriptions-item>
+          <n-descriptions-item label="Token 使用" :span="2" v-if="currentTask.tokenUsage">
+            {{ currentTask.tokenUsage }}
+          </n-descriptions-item>
+          <n-descriptions-item label="成本" :span="2" v-if="currentTask.cost">
+            ¥{{ currentTask.cost.toFixed(4) }}
+          </n-descriptions-item>
         </n-descriptions>
 
+        <!-- 错误信息 -->
+        <n-alert 
+          v-if="currentTask.status === 'failed' && currentTask.error" 
+          type="error" 
+          title="失败原因"
+        >
+          {{ currentTask.error }}
+          <template #action>
+            <n-button size="small" type="error" @click="retryTask(currentTask)">
+              重试此任务
+            </n-button>
+          </template>
+        </n-alert>
+
         <!-- 进度条 -->
-        <n-space vertical>
+        <n-space vertical v-if="currentTask.status === 'processing' || currentTask.status === 'pending'">
           <n-progress
             type="line"
             :percentage="currentTask.progress"
-            :status="currentTask.status === 'failed' ? 'error' : currentTask.status === 'completed' ? 'success' : 'default'"
+            status="default"
           />
-          <n-alert :type="currentTask.status === 'failed' ? 'error' : 'info'">
+          <n-alert type="info">
             {{ currentTask.message || '任务执行中...' }}
           </n-alert>
         </n-space>
@@ -109,13 +145,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useMessage } from 'naive-ui'
 import {
   RefreshOutline,
 } from '@vicons/ionicons5'
 import type { DataTableColumns } from 'naive-ui'
-import { NTag, NButton, NSpace, NIcon } from 'naive-ui'
+import { NTag, NButton, NSpace, NIcon, NProgress, NA } from 'naive-ui'
 
 const message = useMessage()
 
@@ -135,6 +171,9 @@ interface AITask {
       slug?: string
     }
   }
+  error?: string
+  tokenUsage?: number
+  cost?: number
   createdAt: string
   completedAt?: string
 }
@@ -148,6 +187,14 @@ const runningTasks = computed(() => {
   return tasks.value.filter(t => t.status === 'pending' || t.status === 'processing').length
 })
 
+const failedTasks = computed(() => {
+  return tasks.value.filter(t => t.status === 'failed').length
+})
+
+const completedTasks = computed(() => {
+  return tasks.value.filter(t => t.status === 'completed').length
+})
+
 const columns: DataTableColumns = [
   {
     title: '任务 ID',
@@ -159,10 +206,11 @@ const columns: DataTableColumns = [
     title: '状态',
     key: 'status',
     width: 100,
-    render: (row) => {
+    render: (row: any) => {
       return h(NTag, {
         type: getStatusType(row.status),
-        children: () => getStatusText(row.status),
+      }, {
+        default: () => getStatusText(row.status),
       })
     },
   },
@@ -181,34 +229,33 @@ const columns: DataTableColumns = [
     title: '进度',
     key: 'progress',
     width: 150,
-    render: (row) => {
-      return h('div', { style: { width: '100px' } }, [
-        h((window as any).$naiveUI.NProgress, {
-          type: 'line',
-          percentage: row.progress,
-          showIndicator: false,
-          style: { width: '100%' },
-        }),
-      ])
+    render: (row: any) => {
+      return h(NProgress, {
+        type: 'line',
+        percentage: row.progress,
+        showIndicator: false,
+        style: { width: '100px' },
+      })
     },
   },
   {
     title: '创建时间',
     key: 'createdAt',
     width: 180,
-    render: (row) => formatDate(row.createdAt),
+    render: (row: any) => formatDate(row.createdAt),
   },
   {
     title: '操作',
     key: 'actions',
     width: 100,
-    render: (row) => {
+    render: (row: any) => {
       return h(NSpace, {}, {
         default: () => [
           h(NButton, {
             size: 'small',
             onClick: () => showDetail(row),
-            children: () => '详情',
+          }, {
+            default: () => '详情',
           }),
         ],
       })
@@ -234,6 +281,25 @@ function getStatusText(status: string) {
     failed: '失败',
   }
   return texts[status] || status
+}
+
+function getStrategyText(strategy?: string) {
+  const texts: Record<string, string> = {
+    standard: '标准改写',
+    deep: '深度改写',
+    creative: '创意改写',
+  }
+  return texts[strategy || 'standard'] || strategy
+}
+
+function getTemplateText(template?: string) {
+  const texts: Record<string, string> = {
+    tutorial: '教程风格',
+    concept: '概念解析',
+    comparison: '对比分析',
+    practice: '实战演练',
+  }
+  return texts[template || 'tutorial'] || template
 }
 
 function formatDate(dateString: string) {
@@ -265,9 +331,49 @@ async function loadTasks() {
   }
 }
 
+function clearCompletedTasks() {
+  tasks.value = tasks.value.filter(t => t.status === 'pending' || t.status === 'processing')
+  message.success('已清理已完成任务')
+}
+
 function showDetail(task: AITask) {
   currentTask.value = task
   showDetailModal.value = true
+}
+
+async function retryTask(task: AITask) {
+  if (!task.sourceUrl) {
+    message.error('任务没有源 URL，无法重试')
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('access_token')
+    const response = await fetch('/api/admin/articles/ai-rewrite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        sourceUrl: task.sourceUrl,
+        rewriteStrategy: task.rewriteStrategy,
+        templateType: task.templateType,
+      }),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      message.success('重试任务已创建')
+      showDetailModal.value = false
+      loadTasks()
+    } else {
+      message.error(result.message || '重试失败')
+    }
+  } catch (error) {
+    message.error('重试失败')
+  }
 }
 
 function editArticle(id: number) {
@@ -282,7 +388,6 @@ onMounted(() => {
   loadTasks()
   // 每 5 秒自动刷新一次
   const interval = setInterval(loadTasks, 5000)
-  // 组件卸载时清除定时器
   return () => clearInterval(interval)
 })
 </script>

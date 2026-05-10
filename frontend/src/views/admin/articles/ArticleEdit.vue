@@ -367,9 +367,9 @@ const handleAIRewrite = async () => {
     const result = await response.json()
     
     if (result.success) {
-      message.success('AI 改写任务已创建，请在文章列表中查看')
+      message.success('AI 改写任务已创建，请在 AI 改写页面查看进度')
       showAIRewriteModal.value = false
-      router.push('/admin/articles')
+      router.push('/admin/ai-generator')
     } else {
       message.error(result.message || 'AI 改写失败')
     }

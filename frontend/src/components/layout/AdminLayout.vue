@@ -71,6 +71,7 @@ import {
   BookmarksOutline,
   ChatbubbleOutline,
   SettingsOutline,
+  SparklesOutline,
 } from '@vicons/ionicons5'
 import UserInfo from '@/components/common/UserInfo.vue'
 
@@ -96,6 +97,11 @@ const menuOptions: MenuOption[] = [
     label: '文章管理',
     key: 'admin-articles',
     icon: renderIcon(DocumentTextOutline),
+  },
+  {
+    label: 'AI 改写',
+    key: 'admin-ai-generator',
+    icon: renderIcon(SparklesOutline),
   },
   {
     label: '分类管理',

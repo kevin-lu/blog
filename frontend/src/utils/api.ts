@@ -188,6 +188,9 @@ class ApiClient {
     retryCount = 0
   ): Promise<T> {
     try {
+      const fullUrl = `${this.client.defaults.baseURL}${url}`
+      console.log(`[API Request] ${method.toUpperCase()} ${fullUrl}`)
+      
       if (method === 'get' || method === 'delete') {
         const response = await this.client[method]<T>(url, config)
         return response.data

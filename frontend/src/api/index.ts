@@ -210,6 +210,6 @@ export const dashboardApi = {
       stats: DashboardStats
       recent_articles: Article[]
       recent_comments: CommentWithUser[]
-    }>('dashboard/stats')
+    }>('admin/dashboard/stats')
   },
 }

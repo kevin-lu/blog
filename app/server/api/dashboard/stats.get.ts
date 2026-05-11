@@ -1,7 +1,7 @@
 import { defineEventHandler } from 'h3';
 import { getDashboardStats } from '~/server/utils/dashboard-stats';
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   try {
     return await getDashboardStats();
   } catch (error: any) {

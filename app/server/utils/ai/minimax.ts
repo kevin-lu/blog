@@ -79,21 +79,28 @@ export class MiniMaxAI {
   }> {
     // 第一步：提取核心观点
     const extractResponse = await this.chat([
+      { role: 'system', content: '你是一个专业的技术编辑。请严格按照用户要求提取内容，不要添加任何解释。' },
       { role: 'user', content: prompts.extractPrompt + '\n\n' + content }
     ]);
-    const corePoints = extractResponse.choices[0].message.content;
+    let corePoints = extractResponse.choices[0].message.content;
+    // 二次过滤确保没有思考内容
+    corePoints = this.filterThinking(corePoints);
 
     // 第二步：基于核心观点重写
     const rewriteResponse = await this.chat([
+      { role: 'system', content: '你是一个轻松幽默的技术博主。请直接开始写文章，不要复述要求，不要说废话。' },
       { role: 'user', content: prompts.rewritePrompt + '\n\n核心观点：\n' + corePoints }
     ], { temperature: 0.8 });
-    const rewrittenContent = rewriteResponse.choices[0].message.content;
+    let rewrittenContent = rewriteResponse.choices[0].message.content;
+    rewrittenContent = this.filterThinking(rewrittenContent);
 
     // 第三步：优化布局
     const layoutResponse = await this.chat([
+      { role: 'system', content: '你是一个微信公众号排版专家。请直接返回排版后的Markdown内容，不要复述规则，不要添加任何解释。' },
       { role: 'user', content: prompts.layoutPrompt + '\n\n文章内容：\n' + rewrittenContent }
     ]);
-    const finalContent = layoutResponse.choices[0].message.content;
+    let finalContent = layoutResponse.choices[0].message.content;
+    finalContent = this.filterThinking(finalContent);
 
     const totalTokens = extractResponse.usage.total_tokens +
                        rewriteResponse.usage.total_tokens +
@@ -104,5 +111,10 @@ export class MiniMaxAI {
       rewrittenContent: finalContent,
       tokenUsage: totalTokens,
     };
+  }
+
+  private filterThinking(content: string): string {
+    // 移除 <think> 和 </think> 标签及其内容
+    return content.replace(new RegExp('<think>[\\s\\S]*?</</think>>', 'g'), '').trim();
   }
 }

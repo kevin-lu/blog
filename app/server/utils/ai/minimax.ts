@@ -15,6 +15,8 @@ interface MiniMaxResponse {
   choices: Array<{
     message: {
       content: string;
+      reasoning_content?: string;
+      reasoning_details?: Array<{ text?: string }>;
     };
   }>;
   usage: {
@@ -25,11 +27,11 @@ interface MiniMaxResponse {
 export class MiniMaxAI {
   private apiKey: string;
   private model: string;
-  private baseUrl = process.env.MINIMAX_API_HOST || 'https://api.minimax.chat/v1/chat/completions';
+  private baseUrl = process.env.MINIMAX_API_HOST || 'https://api.minimax.io/v1/chat/completions';
 
   constructor(config: MiniMaxConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model || 'MiniMax-M2.7';
+    this.model = this.normalizeModel(config.model || process.env.MINIMAX_MODEL || 'MiniMax-M2.7');
   }
 
   async chat(messages: MiniMaxMessage[], options?: {
@@ -47,6 +49,7 @@ export class MiniMaxAI {
         messages: messages,
         temperature: options?.temperature || 0.7,
         max_tokens: options?.maxTokens || 4000,
+        reasoning_split: true,
       }),
     });
 
@@ -57,12 +60,8 @@ export class MiniMaxAI {
 
     const result = await response.json();
     
-    // 过滤掉模型的思考标签
     if (result.choices && result.choices[0]?.message?.content) {
-      let content = result.choices[0].message.content;
-      // 移除 <think> 和 </think> 标签及其内容
-      content = content.replace(new RegExp('<think>[\\s\\S]*?</</think>>', 'g'), '').trim();
-      result.choices[0].message.content = content;
+      result.choices[0].message.content = this.cleanAssistantContent(result.choices[0].message.content);
     }
     
     return result;
@@ -114,7 +113,23 @@ export class MiniMaxAI {
   }
 
   private filterThinking(content: string): string {
-    // 移除 <think> 和 </think> 标签及其内容
-    return content.replace(new RegExp('<think>[\\s\\S]*?</</think>>', 'g'), '').trim();
+    return this.cleanAssistantContent(content);
+  }
+
+  private cleanAssistantContent(content: string): string {
+    return content
+      .replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '')
+      .replace(/<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi, '')
+      .replace(/<reasoning\b[^>]*>[\s\S]*?<\/reasoning>/gi, '')
+      .replace(/^\s*```(?:markdown|md)?\s*\n([\s\S]*?)\n```\s*$/i, '$1')
+      .trim();
+  }
+
+  private normalizeModel(model: string): string {
+    const trimmed = model.trim();
+    if (/^m2(\.|$)/i.test(trimmed)) {
+      return `MiniMax-${trimmed.replace(/^m/i, 'M')}`;
+    }
+    return trimmed;
   }
 }

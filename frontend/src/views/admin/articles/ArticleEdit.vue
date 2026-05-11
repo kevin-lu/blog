@@ -211,6 +211,7 @@ import {
 import { adminArticleApi, adminCategoryApi, adminTagApi, uploadApi } from '@/api'
 import type { Article } from '@/types'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
+import { renderArticleContent } from '@/utils/markdown'
 
 const router = useRouter()
 const route = useRoute()
@@ -389,7 +390,7 @@ const loadArticle = async () => {
       title: article.title,
       slug: article.slug,
       description: article.description,
-      content: article.content,
+      content: renderArticleContent(article.content || ''),
       cover_image: article.cover_image,
       status: article.status,
       published_at: article.published_at,

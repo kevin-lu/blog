@@ -47,9 +47,9 @@
                 查看文章
               </n-button>
               <n-button
-                v-if="store.currentTask.articleId"
+                v-if="store.currentTask.articleSlug"
                 secondary
-                @click="goToEdit(store.currentTask.articleId)"
+                @click="goToEdit(store.currentTask.articleSlug)"
               >
                 编辑草稿
               </n-button>
@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useAIRewriteStore } from '@/stores/ai-rewrite';
-import { CheckCircleOutline, CloseCircleOutline, TimeOutline, SyncOutline } from '@vicons/ionicons5';
+import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, SyncOutlined } from '@vicons/antd';
 
 const router = useRouter();
 const store = useAIRewriteStore();
@@ -91,10 +91,10 @@ const getAlertType = (status: string) => {
 
 const getStatusIcon = (status: string) => {
   const map: Record<string, any> = {
-    pending: TimeOutline,
-    processing: SyncOutline,
-    completed: CheckCircleOutline,
-    failed: CloseCircleOutline,
+    pending: ClockCircleOutlined,
+    processing: SyncOutlined,
+    completed: CheckCircleOutlined,
+    failed: CloseCircleOutlined,
   };
   return map[status];
 };
@@ -132,8 +132,8 @@ const goToArticle = (slug: string) => {
   window.open(`/posts/${slug}`, '_blank');
 };
 
-const goToEdit = (articleId: number) => {
-  router.push(`/admin/articles/edit/${articleId}`);
+const goToEdit = (slug: string) => {
+  router.push(`/admin/articles/edit/${slug}`);
 };
 </script>
 

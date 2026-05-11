@@ -10,6 +10,16 @@ interface AITask {
   templateType: string;
   articleId?: number;
   articleSlug?: string;
+  progress?: number;
+  message?: string;
+  result?: {
+    article?: {
+      id?: number;
+      slug?: string;
+      title?: string;
+      content?: string;
+    };
+  };
   error?: string;
   tokenUsage?: number;
   cost?: number;

@@ -131,6 +131,7 @@
 
 <script setup lang="ts">
 import { formatDate } from '~/utils/helpers'
+import { extractArticleHeadings } from '~/utils/markdown'
 import type { ArticleDetail } from '~/types'
 
 definePageMeta({
@@ -173,10 +174,27 @@ function generateId(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+function uniqueHeadingId(text: string, seen: Map<string, number>): string {
+  const base = generateId(text) || 'section'
+  const count = seen.get(base) || 0
+  seen.set(base, count + 1)
+  return count === 0 ? base : `${base}-${count + 1}`
+}
+
 function extractHeadings() {
-  if (!article.value?.content) return
+  const content = article.value?.content
+  if (!content) {
+    headings.value = []
+    return
+  }
+
+  if (typeof content === 'string') {
+    headings.value = extractArticleHeadings(content)
+    return
+  }
 
   const result: { id: string; text: string; level: number }[] = []
+  const seen = new Map<string, number>()
 
   function traverse(blocks: any[]) {
     for (const block of blocks) {
@@ -186,7 +204,7 @@ function extractHeadings() {
           const text = block.children?.map((c: any) => c.text).join('') || ''
           if (text) {
             result.push({
-              id: generateId(text),
+              id: uniqueHeadingId(text, seen),
               text,
               level: style === 'h2' ? 2 : 3
             })
@@ -215,28 +233,29 @@ function addIdsToHeadings() {
   if (!article.value?.content) return
   
   nextTick(() => {
-    const articleEl = document.querySelector('.prose')
+    const articleEl = document.querySelector('[data-article-content]')
     if (!articleEl) return
     
     const domHeadings = articleEl.querySelectorAll('h2, h3')
-    let contentIndex = 0
-    
-    function traverse(blocks: any[]) {
-      for (const block of blocks) {
-        if (block._type === 'block') {
-          const style = block.style || 'normal'
-          if (style === 'h2' || style === 'h3') {
-            if (domHeadings[contentIndex]) {
-              const text = block.children?.map((c: any) => c.text).join('') || ''
-              domHeadings[contentIndex].id = generateId(text)
-              contentIndex++
-            }
-          }
-        }
-      }
+    const seen = new Map<string, number>()
+    const renderedHeadings: { id: string; text: string; level: number }[] = []
+
+    domHeadings.forEach((heading) => {
+      const text = heading.textContent?.trim() || ''
+      if (!text) return
+
+      const id = uniqueHeadingId(text, seen)
+      heading.id = id
+      renderedHeadings.push({
+        id,
+        text,
+        level: heading.tagName.toLowerCase() === 'h2' ? 2 : 3
+      })
+    })
+
+    if (typeof article.value?.content === 'string') {
+      headings.value = renderedHeadings
     }
-    
-    traverse(article.value?.content || [])
   })
 }
 

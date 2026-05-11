@@ -129,11 +129,11 @@
               readonly
               :rows="10"
             />
-            <n-space v-if="currentTask.result.article.id">
-              <n-button type="primary" @click="editArticle(currentTask.result.article.id)">
+            <n-space v-if="currentTask.result.article.slug || currentTask.articleSlug">
+              <n-button type="primary" @click="editArticle(currentTask.result.article.slug || currentTask.articleSlug)">
                 编辑文章
               </n-button>
-              <n-button @click="viewArticle(currentTask.result.article.id)">
+              <n-button @click="viewArticle(currentTask.result.article.slug || currentTask.articleSlug)">
                 查看文章
               </n-button>
             </n-space>
@@ -171,6 +171,8 @@ interface AITask {
       slug?: string
     }
   }
+  articleId?: number
+  articleSlug?: string
   error?: string
   tokenUsage?: number
   cost?: number
@@ -388,12 +390,14 @@ async function retryTask(task: AITask) {
   }
 }
 
-function editArticle(id: number) {
-  window.open(`/admin/articles/edit/${id}`, '_blank')
+function editArticle(slug?: string) {
+  if (!slug) return
+  window.open(`/admin/articles/edit/${slug}`, '_blank')
 }
 
-function viewArticle(id: number) {
-  window.open(`/posts/${id}`, '_blank')
+function viewArticle(slug?: string) {
+  if (!slug) return
+  window.open(`/posts/${slug}`, '_blank')
 }
 
 onMounted(() => {

@@ -9,6 +9,14 @@ interface AITask {
   autoPublish: boolean;
   articleId?: number;
   articleSlug?: string;
+  result?: {
+    article?: {
+      id?: number;
+      slug?: string;
+      title?: string;
+      content?: string;
+    };
+  };
   error?: string;
   message?: string;
   progress?: number;

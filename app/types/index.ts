@@ -4,7 +4,7 @@ export interface Article {
   title: string
   slug: { current: string }
   excerpt?: string
-  content?: any[]
+  content?: any[] | string
   coverImage?: {
     asset: {
       _ref: string

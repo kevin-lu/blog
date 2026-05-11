@@ -31,24 +31,26 @@
           </n-text>
         </div>
 
-        <div class="post-body" v-html="article.content"></div>
+        <div class="post-body" v-html="renderedContent"></div>
       </article>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowBackOutline } from '@vicons/ionicons5'
 import type { Article } from '@/types'
 import { articleApi } from '@/api'
+import { renderArticleContent } from '@/utils/markdown'
 
 const router = useRouter()
 const route = useRoute()
 
 const loading = ref(false)
 const article = ref<Article | null>(null)
+const renderedContent = computed(() => renderArticleContent(article.value?.content || ''))
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return ''

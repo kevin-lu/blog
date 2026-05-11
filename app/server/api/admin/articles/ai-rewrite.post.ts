@@ -146,6 +146,14 @@ async function processAIRewrite(
       message: '任务完成',
       articleId: article[0].id,
       articleSlug: slug,
+      result: {
+        article: {
+          id: article[0].id,
+          slug,
+          title: article[0].title,
+          content: article[0].content || '',
+        },
+      },
       tokenUsage: result.tokenUsage,
       cost: result.tokenUsage * 0.0000012, // MiniMax 输出价格
       completedAt: new Date(),

@@ -1,8 +1,8 @@
-import { useMessage, useNotification } from 'naive-ui';
+import { useMessage, useNotification as useNaiveNotification } from 'naive-ui';
 
 export function useNotification() {
   const message = useMessage();
-  const notification = useNotification();
+  const notification = useNaiveNotification();
 
   const success = (content: string) => {
     message.success(content);

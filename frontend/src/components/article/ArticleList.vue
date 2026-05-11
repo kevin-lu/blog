@@ -22,7 +22,8 @@
           :item-count="pagination.total"
           :page-sizes="[10, 20, 30, 50]"
           show-size-picker
-          @update-page="handlePageChange"
+          @update:page="handlePageChange"
+          @update:page-size="handlePageSizeChange"
         >
           <template #prefix="{ itemCount }">
             共 {{ itemCount }} 篇文章
@@ -63,7 +64,6 @@ const loadArticles = async () => {
       limit: pageSize.value,
     }
 
-    // 从路由参数中获取筛选条件
     if (route.query.category) {
       params.category = route.query.category as string
     }
@@ -98,15 +98,29 @@ const handlePageChange = (page: number) => {
   })
 }
 
+const handlePageSizeChange = (size: number) => {
+  router.push({
+    query: {
+      ...route.query,
+      page: '1',
+      pageSize: size.toString(),
+    },
+  })
+}
+
 watch(() => route.query, () => {
   const page = route.query.page ? parseInt(route.query.page as string) : 1
+  const size = route.query.pageSize ? parseInt(route.query.pageSize as string) : 10
   currentPage.value = page
+  pageSize.value = size
   loadArticles()
 }, { deep: true })
 
 onMounted(() => {
   const page = route.query.page ? parseInt(route.query.page as string) : 1
+  const size = route.query.pageSize ? parseInt(route.query.pageSize as string) : 10
   currentPage.value = page
+  pageSize.value = size
   loadArticles()
 })
 </script>

@@ -1,7 +1,7 @@
 import { defineEventHandler, getQuery } from 'h3';
 import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
-import { eq, like, desc, and, type SQL } from 'drizzle-orm';
+import { eq, like, desc, and, type SQL, sql } from 'drizzle-orm';
 import { serializeArticle } from '~/server/utils/article-serializer';
 
 export default defineEventHandler(async (event) => {
@@ -33,20 +33,22 @@ export default defineEventHandler(async (event) => {
       .limit(limit)
       .offset((page - 1) * limit);
     
-    // 查询总数
-    const total = await db
-      .select({ count: articleMeta.id })
+    // 查询总数 - 使用正确的 count() 聚合
+    const totalResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
       .from(articleMeta)
       .where(whereClause);
+    
+    const totalCount = totalResult[0]?.count || 0;
     
     return {
       success: true,
       data: {
         data: articles.map(serializeArticle),
-        total: total[0]?.count || 0,
+        total: totalCount,
         page,
         pageSize: limit,
-        totalPages: Math.ceil((total[0]?.count || 0) / limit),
+        totalPages: Math.ceil(totalCount / limit),
       },
     };
   } catch (error: any) {

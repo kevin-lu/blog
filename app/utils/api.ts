@@ -15,7 +15,7 @@ class ApiClient {
     return localStorage.getItem('admin_token');
   }
 
-  private setToken(token: string): void {
+  public setToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('admin_token', token);
     }

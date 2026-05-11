@@ -10,6 +10,7 @@ export function useAuth() {
       // 尝试从 localStorage 恢复 token
       const token = localStorage.getItem('admin_token');
       if (token) {
+        adminStore.setToken(token);
         await adminStore.fetchCurrentUser();
       }
       

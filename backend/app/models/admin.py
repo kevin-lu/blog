@@ -2,8 +2,12 @@
 Admin User Model
 """
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from app.extensions import db
+from app.utils.password import hash_password, verify_password
+
+
+BCRYPT_PREFIXES = ('$2a$', '$2b$', '$2y$')
 
 
 class Admin(db.Model):
@@ -25,11 +29,23 @@ class Admin(db.Model):
     
     def set_password(self, password):
         """Hash and set password"""
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        self.password_hash = hash_password(password)
     
     def check_password(self, password):
         """Verify password"""
-        return check_password_hash(self.password_hash, password)
+        if not self.password_hash:
+            return False
+
+        if self.password_hash.startswith(BCRYPT_PREFIXES):
+            try:
+                return verify_password(password, self.password_hash)
+            except (TypeError, ValueError):
+                return False
+
+        try:
+            return check_password_hash(self.password_hash, password)
+        except (TypeError, ValueError):
+            return False
     
     def to_dict(self):
         """Convert to dictionary"""

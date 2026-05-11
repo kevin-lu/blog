@@ -7,7 +7,6 @@ from flask_limiter import limiter
 from app.extensions import db
 from app.models.admin import Admin
 from app.utils.jwt import generate_tokens, get_current_admin
-from app.utils.password import verify_password
 from datetime import timedelta
 
 bp = Blueprint('auth', __name__)

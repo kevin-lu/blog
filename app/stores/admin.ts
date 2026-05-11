@@ -44,7 +44,7 @@ export const useAdminStore = defineStore('admin', {
         );
 
         if (response.success) {
-          this.token = response.data.token;
+          this.setToken(response.data.token);
           this.user = response.data.admin;
           return { success: true };
         } else {
@@ -76,6 +76,11 @@ export const useAdminStore = defineStore('admin', {
       this.user = null;
       this.error = null;
       apiClient.clearToken();
+    },
+
+    setToken(token: string) {
+      this.token = token;
+      apiClient.setToken(token);
     },
 
     clearError() {

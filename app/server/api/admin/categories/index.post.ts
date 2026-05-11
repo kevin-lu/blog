@@ -6,9 +6,11 @@ import { z } from 'zod';
 const createCategorySchema = z.object({
   name: z.string().min(1).max(50),
   slug: z.string().min(1).max(50),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   parentId: z.number().optional(),
-  sortOrder: z.number().default(0),
+  parent_id: z.number().nullable().optional(),
+  sortOrder: z.number().optional(),
+  sort_order: z.number().optional(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -30,7 +32,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const { name, slug, description, parentId, sortOrder } = result.data;
+    const { name, slug, description, parentId, parent_id, sortOrder, sort_order } = result.data;
 
     // 检查 slug 是否已存在
     const existing = await db.query.categories.findFirst({
@@ -48,8 +50,8 @@ export default defineEventHandler(async (event) => {
       name,
       slug,
       description: description || null,
-      parentId: parentId || null,
-      sortOrder,
+      parentId: parentId ?? parent_id ?? null,
+      sortOrder: sortOrder ?? sort_order ?? 0,
     }).returning();
 
     return {

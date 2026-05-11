@@ -121,19 +121,19 @@ export const tagApi = {
 // 后台分类管理 API
 export const adminCategoryApi = {
   getList() {
-    return apiClient.get<{ success: boolean; data: Category[] }>('categories')
+    return apiClient.get<{ success: boolean; data: Category[] }>('admin/categories')
   },
 
   create(data: { name: string; slug: string; description?: string; sort_order?: number }) {
-    return apiClient.post<{ success: boolean; data: { category: Category } }>('categories', data)
+    return apiClient.post<{ success: boolean; data: { category: Category } }>('admin/categories', data)
   },
 
   update(id: number, data: { name?: string; slug?: string; description?: string; sort_order?: number }) {
-    return apiClient.put<{ success: boolean; data: { category: Category } }>(`categories/${id}`, data)
+    return apiClient.put<{ success: boolean; data: { category: Category } }>(`admin/categories/${id}`, data)
   },
 
   delete(id: number) {
-    return apiClient.delete<{ success: boolean; message: string }>(`categories/${id}`)
+    return apiClient.delete<{ success: boolean; message: string }>(`admin/categories/${id}`)
   },
 }
 

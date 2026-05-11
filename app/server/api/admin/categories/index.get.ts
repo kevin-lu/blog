@@ -1,18 +1,11 @@
 import { defineEventHandler } from 'h3';
-import { db } from '~/server/database/postgres';
-import { categories } from '~/server/database/schema/categories';
-import { asc } from 'drizzle-orm';
+import { getCategoryList } from '~/server/utils/category-list';
 
 export default defineEventHandler(async () => {
   try {
-    const categoryList = await db
-      .select()
-      .from(categories)
-      .orderBy(asc(categories.sortOrder), asc(categories.name));
-
     return {
       success: true,
-      data: categoryList,
+      data: await getCategoryList(),
     };
   } catch (error: any) {
     console.error('获取分类列表失败:', error);

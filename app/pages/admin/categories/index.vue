@@ -111,6 +111,7 @@ interface Category {
   slug: string;
   description?: string;
   parentId?: number;
+  article_count?: number;
   sortOrder: number;
   createdAt: string;
 }
@@ -159,6 +160,14 @@ const columns = computed<DataTableColumns<Category>>(() => [
   { title: '名称', key: 'name', width: 150 },
   { title: 'Slug', key: 'slug', width: 150 },
   { title: '描述', key: 'description', ellipsis: { tooltip: true }, maxWidth: 200 },
+  {
+    title: '文章数',
+    key: 'article_count',
+    width: 90,
+    render: (row) => h(NTag, { type: 'info', bordered: false, size: 'small' }, {
+      default: () => row.article_count || 0,
+    }),
+  },
   {
     title: '操作',
     key: 'actions',

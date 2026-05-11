@@ -4,8 +4,10 @@ import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { serializeArticle } from '~/server/utils/article-serializer';
+import { getArticleRelations, syncArticleRelations } from '~/server/utils/article-relations';
 
 const optionalDateSchema = z.union([z.string(), z.number(), z.null()]).optional();
+const idListSchema = z.array(z.coerce.number().int().positive()).optional();
 
 const updateArticleSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -15,6 +17,8 @@ const updateArticleSchema = z.object({
   cover_image: z.string().nullable().optional(),
   status: z.enum(['draft', 'published', 'archived']).optional(),
   published_at: optionalDateSchema,
+  categoryIds: idListSchema,
+  tagIds: idListSchema,
 });
 
 export default defineEventHandler(async (event) => {
@@ -57,7 +61,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const { cover_image, published_at, ...data } = result.data;
+    const { cover_image, published_at, categoryIds, tagIds, ...data } = result.data;
     const updateData: any = {
       ...data,
       updatedAt: new Date(),
@@ -82,9 +86,15 @@ export default defineEventHandler(async (event) => {
       .where(eq(articleMeta.slug, slug))
       .returning();
 
+    await syncArticleRelations(updated.id, { categoryIds, tagIds });
+    const relations = await getArticleRelations(updated.id);
+
     return {
       success: true,
-      data: serializeArticle(updated),
+      data: serializeArticle({
+        ...updated,
+        ...relations,
+      }),
     };
   } catch (error: any) {
     if (error.statusCode) {

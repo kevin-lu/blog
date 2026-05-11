@@ -3,8 +3,10 @@ import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { z } from 'zod';
 import { serializeArticle } from '~/server/utils/article-serializer';
+import { getArticleRelations, syncArticleRelations } from '~/server/utils/article-relations';
 
 const optionalDateSchema = z.union([z.string(), z.number(), z.null()]).optional();
+const idListSchema = z.array(z.coerce.number().int().positive()).optional();
 
 const createArticleSchema = z.object({
   slug: z.string().min(1, 'slug 不能为空').max(200),
@@ -14,6 +16,8 @@ const createArticleSchema = z.object({
   cover_image: z.string().nullable().optional(),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
   published_at: optionalDateSchema,
+  categoryIds: idListSchema,
+  tagIds: idListSchema,
 });
 
 export default defineEventHandler(async (event) => {
@@ -36,7 +40,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const { slug, title, description, content, cover_image, status, published_at } = result.data;
+    const { slug, title, description, content, cover_image, status, published_at, categoryIds, tagIds } = result.data;
 
     // 检查 slug 是否已存在
     const existing = await db.query.articleMeta.findFirst({
@@ -67,9 +71,15 @@ export default defineEventHandler(async (event) => {
       updatedAt: now,
     }).returning();
 
+    await syncArticleRelations(newArticle.id, { categoryIds, tagIds });
+    const relations = await getArticleRelations(newArticle.id);
+
     return {
       success: true,
-      data: serializeArticle(newArticle),
+      data: serializeArticle({
+        ...newArticle,
+        ...relations,
+      }),
     };
   } catch (error: any) {
     if (error.statusCode) {

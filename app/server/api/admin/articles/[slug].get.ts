@@ -3,6 +3,7 @@ import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq } from 'drizzle-orm';
 import { serializeArticle } from '~/server/utils/article-serializer';
+import { getArticleRelations } from '~/server/utils/article-relations';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -26,9 +27,14 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    const relations = await getArticleRelations(article.id);
+
     return {
       success: true,
-      data: serializeArticle(article),
+      data: serializeArticle({
+        ...article,
+        ...relations,
+      }),
     };
   } catch (error: any) {
     if (error.statusCode) {

@@ -22,8 +22,8 @@
 
         <!-- 元信息 -->
         <div class="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-          <time :datetime="article.publishedAt">
-            {{ formatDate(article.publishedAt) }}
+          <time :datetime="articleDate">
+            {{ formatDate(articleDate) }}
           </time>
           <NuxtLink
             v-if="article.category"
@@ -35,8 +35,8 @@
           <span v-if="article.readingTime">
             {{ article.readingTime }} 分钟阅读
           </span>
-          <span v-if="article.updatedAt" class="text-gray-400">
-            更新于 {{ formatDate(article.updatedAt) }}
+          <span v-if="updatedDate" class="text-gray-400">
+            更新于 {{ formatDate(updatedDate) }}
           </span>
         </div>
 
@@ -166,6 +166,8 @@ watch(article, (newArticle) => {
 }, { immediate: true })
 
 const headings = ref<{ id: string; text: string; level: number }[]>([])
+const articleDate = computed(() => article.value?.publishedAt || article.value?.published_at || article.value?.createdAt || article.value?.created_at)
+const updatedDate = computed(() => article.value?.updatedAt || article.value?.updated_at)
 
 function generateId(text: string): string {
   return text

@@ -32,8 +32,8 @@
 
       <!-- Meta -->
       <div class="flex items-center gap-3 text-xs text-text-light">
-        <time :datetime="article.publishedAt">
-          {{ formatDate(article.publishedAt) }}
+        <time :datetime="articleDate">
+          {{ formatDate(articleDate) }}
         </time>
         <span v-if="article.readingTime" class="flex items-center gap-1">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ArticleListItem } from '~/types'
 import { formatDate } from '~/utils/helpers'
 
@@ -66,5 +67,7 @@ interface Props {
   article: ArticleListItem
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const articleDate = computed(() => props.article.publishedAt || props.article.published_at || props.article.createdAt || props.article.created_at)
 </script>

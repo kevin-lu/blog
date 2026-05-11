@@ -16,8 +16,11 @@ export interface Article {
   cover_image?: string
   status: 'draft' | 'published' | 'archived'
   published_at?: string
+  publishedAt?: string
   created_at: string
+  createdAt?: string
   updated_at: string
+  updatedAt?: string
   categories?: Category[]
   tags?: Tag[]
   view_count?: number

@@ -27,7 +27,7 @@
         
         <div class="post-meta">
           <n-text depth="3" class="publish-date">
-            {{ formatDate(article.published_at) }}
+            {{ formatDate(articleDate) }}
           </n-text>
         </div>
 
@@ -44,6 +44,7 @@ import { ArrowBackOutline } from '@vicons/ionicons5'
 import type { Article } from '@/types'
 import { articleApi } from '@/api'
 import { renderArticleContent } from '@/utils/markdown'
+import { formatDate, getArticleDate } from '@/utils/date'
 
 const router = useRouter()
 const route = useRoute()
@@ -51,17 +52,7 @@ const route = useRoute()
 const loading = ref(false)
 const article = ref<Article | null>(null)
 const renderedContent = computed(() => renderArticleContent(article.value?.content || ''))
-
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return ''
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+const articleDate = computed(() => article.value ? getArticleDate(article.value) : null)
 
 const loadArticle = async () => {
   loading.value = true

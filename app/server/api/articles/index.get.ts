@@ -2,6 +2,7 @@ import { defineEventHandler, getQuery } from 'h3';
 import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq, like, desc, and, type SQL } from 'drizzle-orm';
+import { serializeArticle } from '~/server/utils/article-serializer';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -41,7 +42,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: {
-        data: articles,
+        data: articles.map(serializeArticle),
         total: total[0]?.count || 0,
         page,
         pageSize: limit,

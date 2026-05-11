@@ -2,6 +2,7 @@ import { defineEventHandler, getRouterParam } from 'h3';
 import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq } from 'drizzle-orm';
+import { serializeArticle } from '~/server/utils/article-serializer';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      data: article[0],
+      data: serializeArticle(article[0]),
     };
   } catch (error: any) {
     console.error('获取文章详情失败:', error);

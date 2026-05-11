@@ -56,6 +56,7 @@ import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined
 import { NButton, NTag, NPopconfirm, NIcon } from 'naive-ui';
 import { apiClient } from '~/utils/api';
 import { useNotification } from '~/composables/useNotification';
+import { formatDateTime } from '~/utils/helpers';
 
 definePageMeta({
   layout: 'admin',
@@ -72,8 +73,11 @@ interface Article {
   coverImage?: string;
   status: string;
   publishedAt?: string;
-  createdAt: string;
-  updatedAt: string;
+  published_at?: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 const loading = ref(false);
@@ -115,13 +119,13 @@ const columns = computed<DataTableColumns<Article>>(() => [
     title: '发布时间',
     key: 'publishedAt',
     width: 180,
-    render: (row) => row.publishedAt ? new Date(row.publishedAt).toLocaleString('zh-CN') : '-',
+    render: (row) => formatDateTime(row.publishedAt || row.published_at),
   },
   {
     title: '创建时间',
     key: 'createdAt',
     width: 180,
-    render: (row) => new Date(row.createdAt).toLocaleString('zh-CN'),
+    render: (row) => formatDateTime(row.createdAt || row.created_at),
   },
   {
     title: '操作',

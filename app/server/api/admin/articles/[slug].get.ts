@@ -2,6 +2,7 @@ import { defineEventHandler, getRouterParam, createError } from 'h3';
 import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq } from 'drizzle-orm';
+import { serializeArticle } from '~/server/utils/article-serializer';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      data: article,
+      data: serializeArticle(article),
     };
   } catch (error: any) {
     if (error.statusCode) {

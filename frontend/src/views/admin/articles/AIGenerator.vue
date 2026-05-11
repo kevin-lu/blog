@@ -152,6 +152,7 @@ import {
 } from '@vicons/ionicons5'
 import type { DataTableColumns } from 'naive-ui'
 import { NTag, NButton, NSpace, NIcon, NProgress, NA } from 'naive-ui'
+import { formatDateTime } from '@/utils/date'
 
 const message = useMessage()
 
@@ -317,8 +318,7 @@ function getTemplateText(template?: string) {
 }
 
 function formatDate(dateString: string) {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleString('zh-CN')
+  return formatDateTime(dateString)
 }
 
 async function loadTasks() {

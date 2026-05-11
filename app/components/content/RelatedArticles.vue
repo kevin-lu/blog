@@ -12,8 +12,8 @@
           {{ article.title }}
         </h4>
         <div class="flex items-center gap-2 text-xs text-gray-400">
-          <time :datetime="article.publishedAt">
-            {{ formatDate(article.publishedAt) }}
+          <time :datetime="getArticleDate(article)">
+            {{ formatDate(getArticleDate(article)) }}
           </time>
           <span v-if="article.readingTime">{{ article.readingTime }} 分钟</span>
         </div>
@@ -39,6 +39,10 @@ const { fetchRelatedArticles } = useBlogData()
 const articles = ref<ArticleListItem[]>([])
 
 const tagSlugs = computed(() => props.tags?.map(t => t.slug.current) || [])
+
+function getArticleDate(article: ArticleListItem) {
+  return article.publishedAt || article.published_at || article.createdAt || article.created_at
+}
 
 const { pending } = await useAsyncData(
   `related-${props.articleId}`,

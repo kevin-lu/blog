@@ -3,13 +3,26 @@ import type { Article } from '~/types'
 /**
  * 格式化日期
  */
-export function formatDate(dateString: string): string {
+export function formatDate(dateString?: string | Date | null): string {
+  if (!dateString) return ''
+
   const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return ''
+
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
+}
+
+export function formatDateTime(dateString?: string | Date | null): string {
+  if (!dateString) return '-'
+
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return '-'
+
+  return date.toLocaleString('zh-CN')
 }
 
 /**

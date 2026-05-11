@@ -26,7 +26,11 @@ export interface Article {
     slug: { current: string }
   }[]
   publishedAt: string
+  published_at?: string
+  createdAt?: string
+  created_at?: string
   updatedAt?: string
+  updated_at?: string
   featured?: boolean
   series?: {
     _id: string
@@ -92,6 +96,9 @@ export interface ArticleListItem {
   categorySlug: string
   tags?: string[]
   publishedAt: string
+  published_at?: string
+  createdAt?: string
+  created_at?: string
   readingTime?: number
 }
 

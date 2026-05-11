@@ -9,7 +9,7 @@
       </p>
       <div class="article-meta">
         <n-text depth="3" class="publish-date">
-          {{ formatDate(article.published_at) }}
+          {{ formatDate(publishedDate) }}
         </n-text>
       </div>
     </div>
@@ -17,8 +17,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Article } from '@/types'
+import { formatDate, getArticleDate } from '@/utils/date'
 
 interface Props {
   article: Article
@@ -31,16 +33,7 @@ const goToArticle = () => {
   router.push(`/posts/${props.article.slug}`)
 }
 
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return ''
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+const publishedDate = computed(() => getArticleDate(props.article))
 </script>
 
 <style scoped>

@@ -91,6 +91,7 @@ import {
 } from '@vicons/ionicons5'
 import type { Article } from '@/types'
 import { adminArticleApi, adminCategoryApi, articleApi } from '@/api'
+import { formatDateTime, getArticleDate } from '@/utils/date'
 
 interface ArticleWithMeta extends Article {
   categories?: any[]
@@ -209,9 +210,8 @@ const columns: DataTableColumns = [
     key: 'published_at',
     width: 160,
     render(row) {
-      const date = row.published_at || row.created_at
       return h('span', { style: 'font-size: 13px; color: #666;' }, [
-        new Date(date).toLocaleString('zh-CN'),
+        formatDateTime(getArticleDate(row)),
       ])
     },
   },

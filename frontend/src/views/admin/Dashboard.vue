@@ -140,6 +140,7 @@ import {
   ChatbubbleOutline,
 } from '@vicons/ionicons5'
 import { dashboardApi } from '@/api'
+import { formatDateTime } from '@/utils/date'
 
 const router = useRouter()
 const message = useMessage()
@@ -154,9 +155,7 @@ const stats = ref({
 const recentArticles = ref<any[]>([])
 const recentComments = ref<any[]>([])
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('zh-CN')
-}
+const formatDate = (dateString?: string | null) => formatDateTime(dateString)
 
 const loadDashboard = async () => {
   try {

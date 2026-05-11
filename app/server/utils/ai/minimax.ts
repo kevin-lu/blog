@@ -71,8 +71,10 @@ export class MiniMaxAI {
     extractPrompt: string;
     rewritePrompt: string;
     layoutPrompt: string;
+    originalTitle?: string;
   }): Promise<{
     corePoints: string;
+    title: string;
     rewrittenContent: string;
     tokenUsage: number;
   }> {
@@ -101,12 +103,37 @@ export class MiniMaxAI {
     let finalContent = layoutResponse.choices[0].message.content;
     finalContent = this.filterThinking(finalContent);
 
+    // 第四步：重新拟定标题，避免沿用原公众号标题
+    const titleResponse = await this.chat([
+      { role: 'system', content: '你是一个技术博客标题编辑。请只输出一个新的中文标题，不要解释，不要加引号，不要使用 Markdown。' },
+      {
+        role: 'user',
+        content: [
+          '请基于下面已经改写完成的文章，重新拟一个适合技术博客的新标题。',
+          '要求：',
+          '1. 不要照搬原标题，也不要只做同义词替换',
+          '2. 标题要准确概括文章主题，避免夸张标题党',
+          '3. 长度控制在 12-32 个中文字符左右',
+          '4. 只输出标题本身',
+          '',
+          `原标题：${prompts.originalTitle || '无'}`,
+          '',
+          `文章内容：\n${finalContent.substring(0, 3000)}`,
+        ].join('\n'),
+      },
+    ], { temperature: 0.8, maxTokens: 120 });
+    const generatedTitle = this.cleanTitle(titleResponse.choices[0].message.content);
+    const title = generatedTitle || this.extractTitleFromMarkdown(finalContent) || prompts.originalTitle || '未命名文章';
+    finalContent = this.replaceMarkdownTitle(finalContent, title);
+
     const totalTokens = extractResponse.usage.total_tokens +
                        rewriteResponse.usage.total_tokens +
-                       layoutResponse.usage.total_tokens;
+                       layoutResponse.usage.total_tokens +
+                       titleResponse.usage.total_tokens;
 
     return {
       corePoints,
+      title,
       rewrittenContent: finalContent,
       tokenUsage: totalTokens,
     };
@@ -131,5 +158,28 @@ export class MiniMaxAI {
       return `MiniMax-${trimmed.replace(/^m/i, 'M')}`;
     }
     return trimmed;
+  }
+
+  private cleanTitle(title: string): string {
+    return this.cleanAssistantContent(title)
+      .split('\n')[0]
+      .replace(/^#+\s*/, '')
+      .replace(/^(?:标题|新标题|文章标题)[:：]\s*/i, '')
+      .replace(/^["'“‘《【\s]+|["'”’》】\s]+$/g, '')
+      .trim()
+      .substring(0, 80);
+  }
+
+  private extractTitleFromMarkdown(content: string): string {
+    const match = content.match(/^\s*#\s+(.+)$/m);
+    return match ? this.cleanTitle(match[1]) : '';
+  }
+
+  private replaceMarkdownTitle(content: string, title: string): string {
+    if (!title) return content;
+    if (/^\s*#\s+.+$/m.test(content)) {
+      return content.replace(/^\s*#\s+.+$/m, `# ${title}`);
+    }
+    return content;
   }
 }

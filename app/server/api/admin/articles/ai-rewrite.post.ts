@@ -105,6 +105,7 @@ async function processAIRewrite(
       extractPrompt: promptsData.extract,
       rewritePrompt: promptsData.rewrite,
       layoutPrompt: promptsData.layout,
+      originalTitle: scraped.title,
     };
     
     updateAITask(taskId, { 
@@ -120,10 +121,12 @@ async function processAIRewrite(
     });
 
     // 步骤 4: 保存文章
-    const slug = slugify(scraped.title) + '-' + Date.now();
+    const title = result.title || scraped.title;
+    const slugBase = slugify(title) || slugify(scraped.title) || 'article';
+    const slug = `${slugBase}-${Date.now()}`;
     const article = await db.insert(articleMeta).values({
       slug,
-      title: scraped.title,
+      title,
       description: scraped.description?.substring(0, 200) || '',
       content: result.rewrittenContent,
       status: autoPublish ? 'published' : 'draft',

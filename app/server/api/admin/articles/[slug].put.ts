@@ -3,15 +3,18 @@ import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { serializeArticle } from '~/server/utils/article-serializer';
+
+const optionalDateSchema = z.union([z.string(), z.number(), z.null()]).optional();
 
 const updateArticleSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   slug: z.string().optional(),
-  description: z.string().optional(),
-  content: z.string().optional(),
-  cover_image: z.string().optional().or(z.literal('')),
-  status: z.enum(['draft', 'published']).optional(),
-  published_at: z.string().optional(),
+  description: z.string().nullable().optional(),
+  content: z.string().nullable().optional(),
+  cover_image: z.string().nullable().optional(),
+  status: z.enum(['draft', 'published', 'archived']).optional(),
+  published_at: optionalDateSchema,
 });
 
 export default defineEventHandler(async (event) => {
@@ -54,10 +57,22 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const updateData: any = { ...result.data };
+    const { cover_image, published_at, ...data } = result.data;
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date(),
+    };
+
+    if ('cover_image' in result.data) {
+      updateData.coverImage = cover_image || null;
+    }
+
+    if ('published_at' in result.data) {
+      updateData.publishedAt = parseOptionalDate(published_at);
+    }
     
     // 如果状态改为 published 且之前未发布，设置发布时间
-    if (updateData.status === 'published' && !existing.publishedAt) {
+    if (updateData.status === 'published' && !existing.publishedAt && !updateData.publishedAt) {
       updateData.publishedAt = new Date();
     }
 
@@ -69,7 +84,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      data: updated,
+      data: serializeArticle(updated),
     };
   } catch (error: any) {
     if (error.statusCode) {
@@ -82,3 +97,10 @@ export default defineEventHandler(async (event) => {
     };
   }
 });
+
+function parseOptionalDate(value: string | number | null | undefined): Date | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}

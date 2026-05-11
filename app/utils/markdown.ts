@@ -5,6 +5,7 @@ export interface ArticleHeading {
 }
 
 const HTML_BLOCK_TAG_RE = /<\/?(?:article|section|div|p|br|hr|h[1-6]|ul|ol|li|blockquote|pre|code|table|thead|tbody|tr|th|td|img|a|strong|em|b|i|u|s|mark)\b/i;
+const HTML_DOCUMENT_START_RE = /^<(?:article|section|div|p|br|hr|h[1-6]|ul|ol|li|blockquote|pre|table)\b/i;
 const MARKDOWN_SIGNAL_RE = /(^|\n)\s{0,3}(#{1,6}\s+|```|~~~|[-*+]\s+|\d+[.)]\s+|>\s+|\|.+\|)/;
 
 export function normalizeArticleContent(content?: string | null): string {
@@ -22,6 +23,7 @@ export function stripThinkingContent(content: string): string {
 export function isHtmlContent(content: string): boolean {
   const normalized = content.trim();
   if (!normalized) return false;
+  if (HTML_DOCUMENT_START_RE.test(normalized)) return true;
   return HTML_BLOCK_TAG_RE.test(normalized) && !MARKDOWN_SIGNAL_RE.test(normalized);
 }
 

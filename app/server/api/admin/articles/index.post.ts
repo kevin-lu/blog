@@ -2,15 +2,18 @@ import { defineEventHandler, readBody, createError } from 'h3';
 import { db } from '~/server/database/postgres';
 import { articleMeta } from '~/server/database/schema/articleMeta';
 import { z } from 'zod';
+import { serializeArticle } from '~/server/utils/article-serializer';
+
+const optionalDateSchema = z.union([z.string(), z.number(), z.null()]).optional();
 
 const createArticleSchema = z.object({
   slug: z.string().min(1, 'slug 不能为空').max(200),
   title: z.string().min(1, '标题不能为空').max(200),
-  description: z.string().optional(),
-  content: z.string().optional(),
-  cover_image: z.string().optional().or(z.literal('')),
-  status: z.enum(['draft', 'published']).default('draft'),
-  published_at: z.string().optional(),
+  description: z.string().nullable().optional(),
+  content: z.string().nullable().optional(),
+  cover_image: z.string().nullable().optional(),
+  status: z.enum(['draft', 'published', 'archived']).default('draft'),
+  published_at: optionalDateSchema,
 });
 
 export default defineEventHandler(async (event) => {
@@ -48,19 +51,25 @@ export default defineEventHandler(async (event) => {
     }
 
     const now = new Date();
+    const publishedAt = status === 'published'
+      ? parseOptionalDate(published_at) || now
+      : parseOptionalDate(published_at);
+
     const [newArticle] = await db.insert(articleMeta).values({
       slug,
       title,
       description,
       content,
-      cover_image: cover_image || null,
+      coverImage: cover_image || null,
       status,
-      publishedAt: status === 'published' ? now : (published_at ? new Date(published_at) : null),
+      publishedAt,
+      createdAt: now,
+      updatedAt: now,
     }).returning();
 
     return {
       success: true,
-      data: newArticle,
+      data: serializeArticle(newArticle),
     };
   } catch (error: any) {
     if (error.statusCode) {
@@ -76,3 +85,10 @@ export default defineEventHandler(async (event) => {
 
 // 需要导入 eq
 import { eq } from 'drizzle-orm';
+
+function parseOptionalDate(value: string | number | null | undefined): Date | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}

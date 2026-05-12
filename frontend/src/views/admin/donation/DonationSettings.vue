@@ -148,21 +148,30 @@ const handleSave = async () => {
 
 const handleWechatUpload = async ({ file }: { file: File }) => {
   try {
-    const result = await donationApi.uploadQRCode('wechat', file)
+    console.log('[Upload] Wechat upload triggered, file:', file)
+    
+    // Naive UI passes a File object directly
+    const result = await donationApi.uploadQRCode('wechat', file as File)
     formData.wechat_qr = result.url
     message.success('上传成功')
-  } catch (error) {
-    message.error('上传失败')
+  } catch (error: any) {
+    console.error('[Upload] Error:', error)
+    console.error('[Upload] Error response:', error.response)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
   }
 }
 
 const handleAlipayUpload = async ({ file }: { file: File }) => {
   try {
-    const result = await donationApi.uploadQRCode('alipay', file)
+    console.log('[Upload] Alipay upload triggered, file:', file)
+    
+    const result = await donationApi.uploadQRCode('alipay', file as File)
     formData.alipay_qr = result.url
     message.success('上传成功')
-  } catch (error) {
-    message.error('上传失败')
+  } catch (error: any) {
+    console.error('[Upload] Error:', error)
+    console.error('[Upload] Error response:', error.response)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
   }
 }
 

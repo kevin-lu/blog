@@ -27,7 +27,16 @@ export const donationApi = {
     formData.append('file', file)
     
     // Debug log
-    console.log('[Donation API] Uploading QR code:', { type, fileName: file.name, size: file.size })
+    console.log('[Donation API] Uploading QR code:', { 
+      type, 
+      fileName: file.name, 
+      size: file.size,
+      fileType: file.type 
+    })
+    console.log('[Donation API] FormData entries:')
+    for (const [key, value] of formData.entries()) {
+      console.log(`  ${key}:`, value instanceof File ? { name: value.name, size: value.size, type: value.type } : value)
+    }
     
     // Don't set Content-Type header manually - let axios set it with boundary
     const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData)

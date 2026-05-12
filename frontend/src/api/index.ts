@@ -298,6 +298,34 @@ export const commentApi = {
   reject(id: number) {
     return apiClient.put<{ comment: Comment }>(`comments/${id}/reject`)
   },
+
+  // 新增方法
+  async getArticleComments(slug: string, params?: { page?: number; limit?: number }) {
+    const response = await apiClient.get<{ 
+      comments: Comment[]
+      total: number
+      page: number
+      limit: number
+    }>(`comments/article/${slug}`, { params })
+    return response
+  },
+
+  async getCommentCount(slug: string) {
+    const response = await apiClient.get<{ count: number }>(`comments/article/${slug}/count`)
+    return response.count
+  },
+
+  async create(data: {
+    article_slug: string
+    content: string
+    author_name: string
+    author_email?: string
+    parent_id?: number | null
+    reply_to?: string | null
+  }) {
+    const response = await apiClient.post<{ comment: Comment }>('comments', data)
+    return response.comment
+  },
 }
 
 export const settingApi = {

@@ -49,14 +49,17 @@ export interface Tag {
 export interface Comment {
   id: number
   article_slug: string
+  content?: string
+  author_name?: string
+  author_email?: string
+  parent_id?: number | null
+  reply_to?: string | null
   github_id?: string
   status: 'pending' | 'approved' | 'rejected'
   is_pinned: boolean
   created_at: string
-  content?: string
-  author_name?: string
-  author_email?: string
-  parent_id?: number
+  updated_at?: string
+  replies?: Comment[]  // 回复列表
   article_title?: string
 }
 

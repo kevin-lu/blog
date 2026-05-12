@@ -72,6 +72,7 @@ import {
   BookmarksOutline,
   ChatbubbleOutline,
   SettingsOutline,
+  HeartOutline,
 } from '@vicons/ionicons5'
 import UserInfo from '@/components/common/UserInfo.vue'
 
@@ -122,6 +123,11 @@ const menuOptions: MenuOption[] = [
     label: '站点设置',
     key: 'admin-settings',
     icon: renderIcon(SettingsOutline),
+  },
+  {
+    label: '打赏设置',
+    key: 'admin-donation',
+    icon: renderIcon(HeartOutline),
   },
 ]
 

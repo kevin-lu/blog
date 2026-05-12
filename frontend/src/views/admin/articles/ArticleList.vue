@@ -61,6 +61,7 @@
         :pagination="pagination"
         :row-key="rowKey"
         @update:checked-row-keys="handleCheck"
+        @update:sorter="handleSort"
       />
     </n-card>
 
@@ -105,6 +106,8 @@ const loading = ref(false)
 const articles = ref<ArticleWithMeta[]>([])
 const showDeleteModal = ref(false)
 const deleteArticle = ref<ArticleWithMeta | null>(null)
+const sortField = ref('published_at')
+const sortOrder = ref('desc')
 
 const filters = reactive({
   search: '',
@@ -215,6 +218,17 @@ const columns: DataTableColumns = [
     },
   },
   {
+    title: '浏览次数',
+    key: 'view_count',
+    width: 100,
+    sorter: 'default',
+    render(row) {
+      return h('span', { style: 'font-size: 13px; color: #666;' }, [
+        row.view_count || 0,
+      ])
+    },
+  },
+  {
     title: '操作',
     key: 'actions',
     width: 200,
@@ -270,6 +284,13 @@ const handleSearch = () => {
   loadArticles()
 }
 
+const handleSort = (field: string, order: string) => {
+  sortField.value = field
+  sortOrder.value = order
+  pagination.page = 1
+  loadArticles()
+}
+
 const handleDelete = (article: ArticleWithMeta) => {
   deleteArticle.value = article
   showDeleteModal.value = true
@@ -297,6 +318,8 @@ const loadArticles = async () => {
     const params: any = {
       page: pagination.page,
       pageSize: pagination.pageSize,
+      orderBy: sortField.value,
+      orderDir: sortOrder.value,
     }
     if (filters.search) params.search = filters.search
     if (filters.status) params.status = filters.status

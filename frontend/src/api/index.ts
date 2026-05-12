@@ -370,3 +370,11 @@ export const aiRewriteApi = {
     return apiClient.post<{ cleared: number }>('articles/ai-tasks/clear')
   },
 }
+
+// 文章浏览次数统计 API
+export const articleViewApi = {
+  async increment(slug: string): Promise<number> {
+    const result = await apiClient.post<{ view_count: number }>(`/api/v1/articles/${slug}/view`, {})
+    return result.view_count
+  },
+}

@@ -23,7 +23,7 @@ export interface Article {
   updatedAt?: string
   categories?: Category[]
   tags?: Tag[]
-  view_count?: number
+  view_count?: number  // 浏览次数
   comment_count?: number
 }
 

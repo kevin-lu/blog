@@ -2,7 +2,7 @@
 Flask Application Factory
 """
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from sqlalchemy import inspect, text
 from dotenv import load_dotenv
 
@@ -47,6 +47,12 @@ def create_app(config_name=None):
     app.register_blueprint(settings.bp, url_prefix='/api/v1/settings')
     app.register_blueprint(upload.bp, url_prefix='/api/v1/upload')
     app.register_blueprint(donations.bp, url_prefix='/api/v1/donations')
+    
+    # Register route to serve uploaded files
+    @app.route('/uploads/<path:filename>')
+    def serve_upload(filename):
+        upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+        return send_from_directory(upload_folder, filename)
     
     # Create database tables
     with app.app_context():

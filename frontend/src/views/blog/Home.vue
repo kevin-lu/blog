@@ -81,15 +81,15 @@ if (route.query.search) {
 
 .home-content {
   display: block;
-  max-width: 900px;
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0 20px;
 }
 
 @media (min-width: 1200px) {
   .home-content {
     display: grid;
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: 1fr 320px;
     gap: 32px;
   }
 }

@@ -41,7 +41,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>© 2024 {{ siteName }}. All rights reserved.</p>
+        <p>© 2026 {{ siteName }}. All rights reserved.</p>
       </div>
     </footer>
   </div>
@@ -52,7 +52,7 @@ import { ref, computed } from 'vue'
 import { MenuOutline, CloseOutline } from '@vicons/ionicons5'
 
 const menuOpen = ref(false)
-const siteName = computed(() => '我的博客')
+const siteName = computed(() => '老卢的博客')
 
 const toggleMobileMenu = () => {
   menuOpen.value = !menuOpen.value

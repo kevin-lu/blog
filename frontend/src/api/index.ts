@@ -406,3 +406,6 @@ export const articleViewApi = {
     return result.view_count
   },
 }
+
+// 打赏设置 API
+export { donationApi } from './donation'

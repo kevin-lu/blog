@@ -30,7 +30,7 @@
       <CommentForm
         :article-slug="comment.article_slug"
         :parent-id="comment.id"
-        :reply-to="comment.author_name"
+        :reply-to="comment.author_name || '匿名用户'"
         :is-reply="true"
         @success="handleReplySuccess"
         @cancel="showReplyForm = false"

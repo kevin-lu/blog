@@ -146,12 +146,17 @@ const handleSave = async () => {
   }
 }
 
-const handleWechatUpload = async ({ file }: { file: File }) => {
+const handleWechatUpload = async ({ file }: { file: any }) => {
   try {
     console.log('[Upload] Wechat upload triggered, file:', file)
+    console.log('[Upload] File object keys:', Object.keys(file))
     
-    // Naive UI passes a File object directly
-    const result = await donationApi.uploadQRCode('wechat', file as File)
+    // Naive UI passes a wrapper object, the real File is in file.file
+    const rawFile = file.file || file
+    console.log('[Upload] Raw file:', rawFile)
+    console.log('[Upload] Raw file type:', rawFile?.constructor?.name)
+    
+    const result = await donationApi.uploadQRCode('wechat', rawFile as File)
     formData.wechat_qr = result.url
     message.success('上传成功')
   } catch (error: any) {
@@ -161,11 +166,15 @@ const handleWechatUpload = async ({ file }: { file: File }) => {
   }
 }
 
-const handleAlipayUpload = async ({ file }: { file: File }) => {
+const handleAlipayUpload = async ({ file }: { file: any }) => {
   try {
     console.log('[Upload] Alipay upload triggered, file:', file)
     
-    const result = await donationApi.uploadQRCode('alipay', file as File)
+    // Naive UI passes a wrapper object, the real File is in file.file
+    const rawFile = file.file || file
+    console.log('[Upload] Raw file:', rawFile)
+    
+    const result = await donationApi.uploadQRCode('alipay', rawFile as File)
     formData.alipay_qr = result.url
     message.success('上传成功')
   } catch (error: any) {

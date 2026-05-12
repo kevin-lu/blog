@@ -49,6 +49,18 @@ class Config:
     # Rate Limiting
     RATELIMIT_DEFAULT = os.environ.get('RATELIMIT_DEFAULT', '100 per hour')
     RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+
+    # AI Rewrite
+    MINIMAX_API_KEY = os.environ.get('MINIMAX_API_KEY', '')
+    MINIMAX_MODEL = os.environ.get('MINIMAX_MODEL', 'MiniMax-M2.7')
+    MINIMAX_API_HOST = os.environ.get('MINIMAX_API_HOST', 'https://api.minimaxi.com/v1/chat/completions')
+    MINIMAX_REQUEST_TIMEOUT = int(os.environ.get('MINIMAX_REQUEST_TIMEOUT', '300'))
+    MINIMAX_MAX_RETRIES = int(os.environ.get('MINIMAX_MAX_RETRIES', '2'))
+    AI_SOURCE_MAX_CHARS = int(os.environ.get('AI_SOURCE_MAX_CHARS', '12000'))
+    AI_REWRITE_RATE_LIMIT = os.environ.get(
+        'AI_REWRITE_RATE_LIMIT',
+        '30 per minute' if os.environ.get('FLASK_ENV', 'development') == 'development' else '5 per hour'
+    )
     
     # Swagger
     SWAGGER_UI_DOC_EXPANSION = 'list'

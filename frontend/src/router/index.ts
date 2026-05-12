@@ -68,14 +68,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/articles/ArticleEdit.vue'),
       },
       {
-        path: 'articles/edit/:slug',
-        name: 'admin-article-edit',
-        component: () => import('@/views/admin/articles/ArticleEdit.vue'),
-      },
-      {
         path: 'ai-generator',
         name: 'admin-ai-generator',
         component: () => import('@/views/admin/articles/AIGenerator.vue'),
+      },
+      {
+        path: 'articles/edit/:slug',
+        name: 'admin-article-edit',
+        component: () => import('@/views/admin/articles/ArticleEdit.vue'),
       },
       {
         path: 'categories',

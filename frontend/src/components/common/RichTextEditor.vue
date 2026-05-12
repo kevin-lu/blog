@@ -328,10 +328,14 @@ const handleAddImage = () => {
 
 const handleImageUploadFinish = ({ file, event }: any) => {
   try {
-    const response = JSON.parse(event.target.responseText)
-    if (response.data && response.data.url) {
-      insertImage(response.data.url)
+    const rawResponse = event?.target?.responseText || event?.target?.response || '{}'
+    const response = JSON.parse(rawResponse)
+    const imageUrl = response.data?.url || response.url
+    if (imageUrl) {
+      insertImage(imageUrl)
       message.success('图片上传成功')
+    } else {
+      message.error('图片上传失败')
     }
   } catch (error) {
     message.error('图片上传失败')

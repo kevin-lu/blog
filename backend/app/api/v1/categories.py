@@ -3,8 +3,7 @@ Categories API v1
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.category import Category
 from app.utils.jwt import get_current_admin
 from datetime import datetime
@@ -77,6 +76,39 @@ def create_category():
     return jsonify({
         'category': category.to_dict()
     }), 201
+
+
+@bp.route('/<int:id>', methods=['PUT'])
+@jwt_required()
+@limiter.limit("10 per hour")
+def update_category(id):
+    """Update category (requires authentication)"""
+    category = Category.query.get_or_404(id)
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    if 'name' in data:
+        category.name = data['name']
+    if 'slug' in data:
+        existing = Category.query.filter_by(slug=data['slug']).first()
+        if existing and existing.id != category.id:
+            return jsonify({'error': 'Slug already exists'}), 400
+        category.slug = data['slug']
+    if 'description' in data:
+        category.description = data['description']
+    if 'parent_id' in data:
+        category.parent_id = data['parent_id']
+    if 'sort_order' in data:
+        category.sort_order = data['sort_order']
+
+    category.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'category': category.to_dict()
+    }), 200
 
 
 @bp.route('/<int:id>', methods=['DELETE'])

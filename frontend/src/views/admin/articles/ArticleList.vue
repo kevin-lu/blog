@@ -80,7 +80,7 @@
 <script setup lang="ts">
 import { ref, reactive, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, useDialog, NButton, NTag, NIcon } from 'naive-ui'
+import { useMessage, NButton, NTag, NIcon } from 'naive-ui'
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
 import {
   CreateOutline,
@@ -90,7 +90,7 @@ import {
   EyeOutline,
 } from '@vicons/ionicons5'
 import type { Article } from '@/types'
-import { adminArticleApi, adminCategoryApi, articleApi } from '@/api'
+import { adminArticleApi, adminCategoryApi } from '@/api'
 import { formatDateTime, getArticleDate } from '@/utils/date'
 
 interface ArticleWithMeta extends Article {
@@ -100,7 +100,6 @@ interface ArticleWithMeta extends Article {
 
 const router = useRouter()
 const message = useMessage()
-const dialog = useDialog()
 
 const loading = ref(false)
 const articles = ref<ArticleWithMeta[]>([])

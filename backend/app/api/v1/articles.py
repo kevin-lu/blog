@@ -1,17 +1,64 @@
 """
 Articles API v1
 """
+import threading
+from datetime import datetime, timezone
+from html import unescape
+import re
+
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
-from app.extensions import db
-from app.models.article import Article, ArticleCategory, ArticleTag
+from flask_jwt_extended import jwt_required, verify_jwt_in_request, get_jwt_identity
+from app.extensions import db, limiter
+from app.models.article import Article
 from app.models.category import Category
 from app.models.tag import Tag
-from app.utils.jwt import get_current_admin
-from datetime import datetime
+from app.services.ai_rewrite import slugify, process_rewrite_task
+from app.services.ai_tasks import create_task, get_task, list_tasks, clear_finished_tasks
 
 bp = Blueprint('articles', __name__)
+
+
+def parse_datetime_value(value):
+    """Parse ISO strings or timestamps into naive UTC datetimes."""
+    if value in (None, ''):
+        return None
+    if isinstance(value, (int, float)):
+        timestamp = value / 1000 if value > 10_000_000_000 else value
+        return datetime.utcfromtimestamp(timestamp)
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            if normalized.endswith('Z'):
+                normalized = normalized[:-1] + '+00:00'
+            parsed = datetime.fromisoformat(normalized)
+            if parsed.tzinfo:
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            return None
+    return None
+
+
+def summarize_description(content, fallback='', limit=200):
+    if fallback:
+        return fallback[:limit]
+    text = re.sub(r'<[^>]+>', ' ', content or '')
+    text = unescape(re.sub(r'\s+', ' ', text)).strip()
+    return text[:limit]
+
+
+def build_article_slug(raw_slug, title, existing_article=None):
+    base = slugify(raw_slug or title or '') or 'article'
+    candidate = base
+    counter = 1
+    while True:
+        found = Article.query.filter_by(slug=candidate).first()
+        if not found or (existing_article and found.id == existing_article.id):
+            return candidate
+        counter += 1
+        candidate = f'{base}-{counter}'
 
 
 @bp.route('', methods=['GET'])
@@ -99,11 +146,98 @@ def get_article(slug):
             "article": { ...article data... }
         }
     """
-    article = Article.query.filter_by(slug=slug, status='published').first_or_404()
+    is_admin_request = False
+    try:
+        verify_jwt_in_request(optional=True)
+        is_admin_request = get_jwt_identity() is not None
+    except Exception:
+        is_admin_request = False
+
+    query = Article.query.filter_by(slug=slug)
+    if not is_admin_request:
+        query = query.filter_by(status='published')
+
+    article = query.first_or_404()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 200
+
+
+@bp.route('/ai-rewrite', methods=['POST'])
+@jwt_required()
+@limiter.limit(lambda: current_app.config.get('AI_REWRITE_RATE_LIMIT', '30 per minute'))
+def ai_rewrite():
+    """Submit an AI rewrite task."""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    source_url = (data.get('sourceUrl') or '').strip()
+    rewrite_strategy = data.get('rewriteStrategy', 'standard')
+    template_type = data.get('templateType', 'tutorial')
+    auto_publish = bool(data.get('autoPublish', False))
+
+    if not source_url:
+        return jsonify({'error': '请提供文章链接'}), 400
+    if 'mp.weixin.qq.com' not in source_url:
+        return jsonify({'error': '目前仅支持微信公众号文章链接'}), 400
+    if rewrite_strategy not in ('standard', 'deep', 'creative'):
+        return jsonify({'error': '不支持的改写策略'}), 400
+    if template_type not in ('tutorial', 'concept', 'comparison', 'practice'):
+        return jsonify({'error': '不支持的文章模板'}), 400
+    if not current_app.config.get('MINIMAX_API_KEY'):
+        return jsonify({'error': '后端未配置 MINIMAX_API_KEY'}), 400
+
+    task = create_task({
+        'status': 'processing',
+        'progress': 5,
+        'message': '任务已创建，准备抓取原文...',
+        'source_url': source_url,
+        'rewrite_strategy': rewrite_strategy,
+        'template_type': template_type,
+        'auto_publish': auto_publish,
+    })
+
+    app = current_app._get_current_object()
+    worker = threading.Thread(
+        target=process_rewrite_task,
+        args=(app, task['id'], source_url, rewrite_strategy, template_type, auto_publish),
+        daemon=True,
+    )
+    worker.start()
+
+    return jsonify({
+        'task': task,
+    }), 202
+
+
+@bp.route('/ai-progress', methods=['GET'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def ai_progress():
+    """Fetch rewrite task progress or recent task history."""
+    task_id = request.args.get('taskId')
+
+    if task_id:
+        task = get_task(task_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        return jsonify({'task': task}), 200
+
+    return jsonify({
+        'tasks': list_tasks(),
+    }), 200
+
+
+@bp.route('/ai-tasks/clear', methods=['POST'])
+@jwt_required()
+@limiter.limit("10 per hour")
+def clear_ai_tasks():
+    """Clear completed and failed AI tasks from memory."""
+    cleared = clear_finished_tasks()
+    return jsonify({'cleared': cleared}), 200
 
 
 @bp.route('', methods=['POST'])
@@ -136,19 +270,32 @@ def create_article():
     # Validate required fields
     if not data.get('title'):
         return jsonify({'error': 'Title is required'}), 400
-    
+
+    slug = build_article_slug(data.get('slug'), data.get('title'))
+
     # Check if slug already exists
-    if Article.query.filter_by(slug=data.get('slug')).first():
+    if Article.query.filter_by(slug=slug).first():
         return jsonify({'error': 'Slug already exists'}), 400
     
     # Create article
     article = Article(
-        slug=data.get('slug'),
+        slug=slug,
         title=data.get('title'),
-        description=data.get('description'),
+        description=data.get('description') or summarize_description(data.get('content'), ''),
+        content=data.get('content'),
         cover_image=data.get('cover_image'),
+        source_url=data.get('source_url'),
+        ai_generated=1 if data.get('ai_generated') else 0,
+        ai_model=data.get('ai_model'),
+        rewrite_strategy=data.get('rewrite_strategy'),
+        template_type=data.get('template_type'),
+        word_count=data.get('word_count'),
+        auto_published=1 if data.get('auto_published') else 0,
         status=data.get('status', 'draft'),
-        published_at=datetime.utcnow() if data.get('status') == 'published' else None
+        published_at=(
+            parse_datetime_value(data.get('published_at')) or datetime.utcnow()
+            if data.get('status') == 'published' else parse_datetime_value(data.get('published_at'))
+        ),
     )
     
     # Set categories
@@ -165,7 +312,7 @@ def create_article():
     db.session.commit()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 201
 
 
@@ -200,14 +347,36 @@ def update_article(slug):
     # Update fields
     if 'title' in data:
         article.title = data['title']
+    if 'slug' in data:
+        article.slug = build_article_slug(data.get('slug'), data.get('title') or article.title, article)
     if 'description' in data:
         article.description = data['description']
+    elif 'content' in data and not article.description:
+        article.description = summarize_description(data.get('content'), article.description or '')
+    if 'content' in data:
+        article.content = data['content']
     if 'cover_image' in data:
         article.cover_image = data['cover_image']
+    if 'source_url' in data:
+        article.source_url = data['source_url']
+    if 'ai_generated' in data:
+        article.ai_generated = 1 if data.get('ai_generated') else 0
+    if 'ai_model' in data:
+        article.ai_model = data.get('ai_model')
+    if 'rewrite_strategy' in data:
+        article.rewrite_strategy = data.get('rewrite_strategy')
+    if 'template_type' in data:
+        article.template_type = data.get('template_type')
+    if 'word_count' in data:
+        article.word_count = data.get('word_count')
+    if 'auto_published' in data:
+        article.auto_published = 1 if data.get('auto_published') else 0
     if 'status' in data:
         article.status = data['status']
         if data['status'] == 'published' and not article.published_at:
             article.published_at = datetime.utcnow()
+    if 'published_at' in data:
+        article.published_at = parse_datetime_value(data.get('published_at'))
     
     # Update categories
     if 'category_ids' in data:
@@ -223,7 +392,7 @@ def update_article(slug):
     db.session.commit()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 200
 
 

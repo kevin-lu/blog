@@ -3,8 +3,7 @@ Authentication API v1
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from flask_limiter import limiter
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.admin import Admin
 from app.utils.jwt import generate_tokens, get_current_admin
 from datetime import timedelta

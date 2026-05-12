@@ -13,6 +13,7 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
     slug = db.Column(db.String(80), unique=True, nullable=False)
+    color = db.Column(db.String(20), default='#18a058')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -22,6 +23,7 @@ class Tag(db.Model):
             'id': self.id,
             'name': self.name,
             'slug': self.slug,
+            'color': self.color,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
     

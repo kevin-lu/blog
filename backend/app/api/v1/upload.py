@@ -5,7 +5,7 @@ import os
 import uuid
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
+from app.extensions import limiter
 from werkzeug.utils import secure_filename
 from PIL import Image
 

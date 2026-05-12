@@ -3,8 +3,7 @@ Site Settings API v1
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.site_setting import SiteSetting
 from datetime import datetime
 

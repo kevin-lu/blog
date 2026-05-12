@@ -1,9 +1,11 @@
 """
 Flask Application Factory
 """
+import os
 from flask import Flask
+from sqlalchemy import inspect, text
+from dotenv import load_dotenv
 
-from .config import config
 from .extensions import db, jwt, cors, cache, limiter, api
 
 
@@ -19,6 +21,9 @@ def create_app(config_name=None):
     """
     if config_name is None:
         config_name = 'default'
+
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+    from .config import config
     
     app = Flask(__name__)
     app.config.from_object(config[config_name])
@@ -45,5 +50,34 @@ def create_app(config_name=None):
     # Create database tables
     with app.app_context():
         db.create_all()
-    
+        ensure_database_schema()
+
     return app
+
+
+def ensure_database_schema():
+    """Apply minimal additive schema updates for the SQLite dev database."""
+    inspector = inspect(db.engine)
+
+    if 'article_meta' in inspector.get_table_names():
+        existing_columns = {column['name'] for column in inspector.get_columns('article_meta')}
+        required_columns = {
+            'content': 'TEXT',
+            'source_url': 'TEXT',
+            'ai_generated': 'INTEGER DEFAULT 0',
+            'ai_model': 'VARCHAR(100)',
+            'rewrite_strategy': 'VARCHAR(20)',
+            'template_type': 'VARCHAR(20)',
+            'word_count': 'INTEGER',
+            'auto_published': 'INTEGER DEFAULT 0',
+        }
+        with db.engine.begin() as connection:
+            for column_name, column_type in required_columns.items():
+                if column_name not in existing_columns:
+                    connection.execute(text(f'ALTER TABLE article_meta ADD COLUMN {column_name} {column_type}'))
+
+    if 'tags' in inspector.get_table_names():
+        existing_columns = {column['name'] for column in inspector.get_columns('tags')}
+        if 'color' not in existing_columns:
+            with db.engine.begin() as connection:
+                connection.execute(text("ALTER TABLE tags ADD COLUMN color VARCHAR(20) DEFAULT '#18a058'"))

@@ -3,8 +3,7 @@ Tags API v1
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.tag import Tag
 from datetime import datetime
 
@@ -61,7 +60,8 @@ def create_tag():
     
     tag = Tag(
         name=data.get('name'),
-        slug=data.get('slug')
+        slug=data.get('slug'),
+        color=data.get('color') or '#18a058',
     )
     
     db.session.add(tag)
@@ -70,6 +70,35 @@ def create_tag():
     return jsonify({
         'tag': tag.to_dict()
     }), 201
+
+
+@bp.route('/<int:id>', methods=['PUT'])
+@jwt_required()
+@limiter.limit("10 per hour")
+def update_tag(id):
+    """Update tag (requires authentication)"""
+    tag = Tag.query.get_or_404(id)
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    if 'name' in data:
+        tag.name = data['name']
+    if 'slug' in data:
+        existing = Tag.query.filter_by(slug=data['slug']).first()
+        if existing and existing.id != tag.id:
+            return jsonify({'error': 'Slug already exists'}), 400
+        tag.slug = data['slug']
+    if 'color' in data:
+        tag.color = data.get('color') or '#18a058'
+
+    tag.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'tag': tag.to_dict()
+    }), 200
 
 
 @bp.route('/<int:id>', methods=['DELETE'])

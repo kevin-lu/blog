@@ -30,7 +30,7 @@
       preset="dialog"
       :title="isEdit ? '编辑分类' : '新建分类'"
       :positive-text="saving ? '保存中...' : '确定'"
-      :negative-text="cancelText"
+      negative-text="取消"
       @positive-click="handleSave"
     >
       <n-form
@@ -83,13 +83,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, h, onMounted } from 'vue'
-import { useMessage, useDialog, NButton, NTag, NIcon, NInputNumber } from 'naive-ui'
+import { useMessage, NButton, NTag, NIcon, NInputNumber } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { CreateOutline, PencilOutline, TrashOutline } from '@vicons/ionicons5'
 import { adminCategoryApi } from '@/api'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const loading = ref(false)
 const categories = ref<any[]>([])

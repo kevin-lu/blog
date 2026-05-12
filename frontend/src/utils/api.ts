@@ -31,8 +31,10 @@ class ApiClient {
   private retryDelay = 1000 // ms
 
   constructor() {
+    const baseURL = (import.meta as any).env.VITE_API_BASE_URL || '/api/v1'
+
     this.client = axios.create({
-      baseURL: '/api',
+      baseURL,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -188,7 +190,9 @@ class ApiClient {
     retryCount = 0
   ): Promise<T> {
     try {
-      const fullUrl = `${this.client.defaults.baseURL}${url}`
+      const baseURL = String(this.client.defaults.baseURL || '').replace(/\/$/, '')
+      const path = url.replace(/^\//, '')
+      const fullUrl = `${baseURL}/${path}`
       console.log(`[API Request] ${method.toUpperCase()} ${fullUrl}`)
       
       if (method === 'get' || method === 'delete') {

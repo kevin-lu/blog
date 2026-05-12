@@ -78,7 +78,7 @@ def update_donation_settings():
 
 @bp.route('/upload-qr', methods=['POST'])
 @jwt_required()
-@limiter.limit("10 per hour")
+@limiter.limit("30 per hour")
 def upload_qr_code():
     """
     Upload QR code image

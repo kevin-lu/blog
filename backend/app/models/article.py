@@ -54,6 +54,7 @@ class Article(db.Model):
             'cover_image': self.cover_image,
             'status': self.status,
             'view_count': self.view_count or 0,
+            'comment_count': self.comments.filter_by(status='approved').count(),
             'published_at': self.published_at.isoformat() if self.published_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

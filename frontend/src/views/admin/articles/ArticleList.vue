@@ -229,6 +229,16 @@ const columns: DataTableColumns = [
     },
   },
   {
+    title: '评论数',
+    key: 'comment_count',
+    width: 100,
+    render(row) {
+      return h('span', { style: 'font-size: 13px; color: #666;' }, [
+        row.comment_count || 0,
+      ])
+    },
+  },
+  {
     title: '操作',
     key: 'actions',
     width: 200,

@@ -8,6 +8,7 @@ from .tag import Tag
 from .comment import Comment
 from .site_setting import SiteSetting
 from .operation_log import OperationLog
+from .donation import DonationSetting
 
 __all__ = [
     'Admin',
@@ -19,4 +20,5 @@ __all__ = [
     'Comment',
     'SiteSetting',
     'OperationLog',
+    'DonationSetting',
 ]

@@ -81,6 +81,9 @@
         </n-tag>
       </div>
     </n-card>
+
+    <!-- Donation Card -->
+    <DonationCard />
   </div>
 </template>
 
@@ -95,6 +98,7 @@ import {
 } from '@vicons/ionicons5'
 import type { Category, Tag } from '@/types'
 import { categoryApi, tagApi } from '@/api'
+import DonationCard from '@/components/donation/DonationCard.vue'
 
 const router = useRouter()
 const route = useRoute()

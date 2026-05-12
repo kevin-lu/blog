@@ -1,50 +1,50 @@
-#!/usr/bin/env python
-"""
-Create Admin User Script
-"""
-import sys
-import os
+#!/usr/bin/env python3
+"""Create admin user"""
+import pymysql
+from werkzeug.security import generate_password_hash
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+config = {
+    'host': '114.55.165.189',
+    'port': 3306,
+    'user': 'root',
+    'password': 'Root@123456',
+    'database': 'blog_db',
+    'charset': 'utf8mb4'
+}
 
-from app import create_app
-from app.extensions import db
-from app.models.admin import Admin
-
-def create_admin(username, password, email=None):
-    """Create admin user"""
-    app = create_app()
+try:
+    connection = pymysql.connect(**config)
+    cursor = connection.cursor()
     
-    with app.app_context():
-        # Check if admin already exists
-        existing_admin = Admin.query.filter_by(username=username).first()
-        if existing_admin:
-            print(f"Admin '{username}' already exists!")
-            return False
-        
-        # Create new admin
-        admin = Admin(
-            username=username,
-            email=email or f'{username}@example.com'
-        )
-        admin.set_password(password)
-        
-        db.session.add(admin)
-        db.session.commit()
-        
-        print(f"Admin user '{username}' created successfully!")
-        print(f"Email: {admin.email}")
-        return True
-
-if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("Usage: python create_admin.py <username> <password> [email]")
-        print("Example: python create_admin.py admin admin123 admin@example.com")
-        sys.exit(1)
+    # Check if admin2 exists
+    cursor.execute("SELECT COUNT(*) FROM admins WHERE username = %s", ('admin2',))
+    count = cursor.fetchone()[0]
     
-    username = sys.argv[1]
-    password = sys.argv[2]
-    email = sys.argv[3] if len(sys.argv) > 3 else None
+    if count > 0:
+        print("ℹ️  admin2 already exists, deleting...")
+        cursor.execute("DELETE FROM admins WHERE username = %s", ('admin2',))
+        connection.commit()
     
-    create_admin(username, password, email)
+    # Create admin2
+    password_hash = generate_password_hash('Admin@123456')
+    cursor.execute("""
+        INSERT INTO admins (username, password_hash, email, role, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, NOW(), NOW())
+    """, ('admin2', password_hash, 'admin@example.com', 'admin'))
+    connection.commit()
+    
+    print("✅ Admin user 'admin2' created successfully!")
+    print("Username: admin2")
+    print("Password: Admin@123456")
+    
+    # Verify
+    cursor.execute("SELECT id, username, email FROM admins WHERE username = 'admin2'")
+    admin = cursor.fetchone()
+    if admin:
+        print(f"\nVerified: ID={admin[0]}, Username={admin[1]}, Email={admin[2]}")
+    
+except Exception as e:
+    print(f"❌ Error: {e}")
+finally:
+    if connection:
+        connection.close()

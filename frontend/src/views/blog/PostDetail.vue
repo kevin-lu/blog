@@ -37,6 +37,9 @@
 
         <div class="post-body" v-html="renderedContent"></div>
       </article>
+
+      <!-- Comment Section -->
+      <CommentSection :article-slug="route.params.slug as string" />
     </div>
   </div>
 </template>
@@ -49,6 +52,7 @@ import type { Article } from '@/types'
 import { articleApi, articleViewApi } from '@/api'
 import { renderArticleContent } from '@/utils/markdown'
 import { formatDate, getArticleDate } from '@/utils/date'
+import CommentSection from './components/CommentSection.vue'
 
 const router = useRouter()
 const route = useRoute()

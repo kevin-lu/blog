@@ -1,33 +1,36 @@
-import request from '@/utils/request'
+import { apiClient } from '@/utils/api'
 import type { DonationSetting, DonationSettingUpdate } from '@/types'
 
 export const donationApi = {
   /**
    * Get donation settings (public)
    */
-  getSettings(): Promise<DonationSetting | null> {
-    return request.get('/donations').then(res => res.data.settings)
+  async getSettings(): Promise<DonationSetting | null> {
+    const result = await apiClient.get<{ settings: DonationSetting }>('/donations')
+    return result.settings
   },
 
   /**
    * Update donation settings
    */
-  updateSettings(data: DonationSettingUpdate): Promise<DonationSetting> {
-    return request.put('/donations', data).then(res => res.data.settings)
+  async updateSettings(data: DonationSettingUpdate): Promise<DonationSetting> {
+    const result = await apiClient.put<{ settings: DonationSetting }>('/donations', data)
+    return result.settings
   },
 
   /**
    * Upload QR code image
    */
-  uploadQRCode(type: 'wechat' | 'alipay', file: File): Promise<{ url: string }> {
+  async uploadQRCode(type: 'wechat' | 'alipay', file: File): Promise<{ url: string }> {
     const formData = new FormData()
     formData.append('type', type)
     formData.append('file', file)
     
-    return request.post('/donations/upload-qr', formData, {
+    const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
+    return result
   },
 }

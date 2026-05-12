@@ -26,11 +26,12 @@ export const donationApi = {
     formData.append('type', type)
     formData.append('file', file)
     
-    const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    // Debug log
+    console.log('[Donation API] Uploading QR code:', { type, fileName: file.name, size: file.size })
+    
+    // Don't set Content-Type header manually - let axios set it with boundary
+    const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData)
+    console.log('[Donation API] Upload result:', result)
     return result
   },
 }

@@ -25,6 +25,7 @@ class Article(db.Model):
     auto_published = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='draft')  # draft, published, archived
     published_at = db.Column(db.DateTime)
+    view_count = db.Column(db.Integer, default=0, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -52,6 +53,7 @@ class Article(db.Model):
             'description': self.description,
             'cover_image': self.cover_image,
             'status': self.status,
+            'view_count': self.view_count or 0,
             'published_at': self.published_at.isoformat() if self.published_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

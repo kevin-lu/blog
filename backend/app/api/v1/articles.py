@@ -90,6 +90,8 @@ def get_articles():
     tag = request.args.get('tag')
     status = request.args.get('status', 'published')
     search = request.args.get('search')
+    order_by = request.args.get('order_by', 'published_at')
+    order_dir = request.args.get('order_dir', 'desc')
     
     # Build query
     query = Article.query
@@ -119,8 +121,17 @@ def get_articles():
             )
         )
     
-    # Order by published_at desc
-    query = query.order_by(Article.published_at.desc())
+    # Order by field
+    order_map = {
+        'published_at': Article.published_at,
+        'view_count': Article.view_count,
+        'created_at': Article.created_at,
+    }
+    order_field = order_map.get(order_by, Article.published_at)
+    if order_dir == 'asc':
+        query = query.order_by(order_field.asc())
+    else:
+        query = query.order_by(order_field.desc())
     
     # Paginate
     pagination = query.paginate(page=page, per_page=limit, error_out=False)

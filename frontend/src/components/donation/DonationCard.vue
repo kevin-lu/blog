@@ -59,18 +59,23 @@ import { ref, onMounted } from 'vue'
 import { donationApi } from '@/api'
 import type { DonationSetting } from '@/types'
 import DonationModal from './DonationModal.vue'
+import { resolveServerAssetUrl } from '@/utils/assets'
 
 const settings = ref<DonationSetting | null>(null)
 const modalRef = ref<InstanceType<typeof DonationModal>>()
 
 const showQr = (qr: string, type: 'wechat' | 'alipay') => {
-  modalRef.value?.open(qr, type)
+  modalRef.value?.open(resolveServerAssetUrl(qr), type)
 }
 
 onMounted(async () => {
   try {
     const data = await donationApi.getSettings()
-    settings.value = data
+    settings.value = data ? {
+      ...data,
+      wechat_qr: resolveServerAssetUrl(data.wechat_qr),
+      alipay_qr: resolveServerAssetUrl(data.alipay_qr),
+    } : data
   } catch (error) {
     console.error('Failed to load donation settings:', error)
   }

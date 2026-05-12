@@ -114,6 +114,7 @@ import { ImageOutline } from '@vicons/ionicons5'
 import { donationApi } from '@/api'
 import type { DonationSetting, DonationSettingUpdate } from '@/types'
 import DonationCard from '@/components/donation/DonationCard.vue'
+import { resolveServerAssetUrl } from '@/utils/assets'
 
 const message = useMessage()
 
@@ -157,7 +158,7 @@ const handleWechatUpload = async ({ file }: { file: any }) => {
     console.log('[Upload] Raw file type:', rawFile?.constructor?.name)
     
     const result = await donationApi.uploadQRCode('wechat', rawFile as File)
-    formData.wechat_qr = result.url
+    formData.wechat_qr = resolveServerAssetUrl(result.url)
     message.success('上传成功')
   } catch (error: any) {
     console.error('[Upload] Error:', error)
@@ -175,7 +176,7 @@ const handleAlipayUpload = async ({ file }: { file: any }) => {
     console.log('[Upload] Raw file:', rawFile)
     
     const result = await donationApi.uploadQRCode('alipay', rawFile as File)
-    formData.alipay_qr = result.url
+    formData.alipay_qr = resolveServerAssetUrl(result.url)
     message.success('上传成功')
   } catch (error: any) {
     console.error('[Upload] Error:', error)
@@ -191,8 +192,8 @@ onMounted(async () => {
       formData.title = settings.title
       formData.description = settings.description || ''
       formData.enabled = settings.enabled
-      formData.wechat_qr = settings.wechat_qr || undefined
-      formData.alipay_qr = settings.alipay_qr || undefined
+      formData.wechat_qr = resolveServerAssetUrl(settings.wechat_qr) || undefined
+      formData.alipay_qr = resolveServerAssetUrl(settings.alipay_qr) || undefined
     }
   } catch (error) {
     console.error('Failed to load donation settings:', error)

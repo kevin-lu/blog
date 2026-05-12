@@ -29,6 +29,10 @@
           <n-text depth="3" class="publish-date">
             {{ formatDate(articleDate) }}
           </n-text>
+          <n-text depth="3" class="view-count" v-if="article && article.view_count">
+            <n-icon :component="EyeOutline" size="14" />
+            {{ article.view_count }} 次阅读
+          </n-text>
         </div>
 
         <div class="post-body" v-html="renderedContent"></div>
@@ -40,9 +44,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowBackOutline } from '@vicons/ionicons5'
+import { ArrowBackOutline, EyeOutline } from '@vicons/ionicons5'
 import type { Article } from '@/types'
-import { articleApi } from '@/api'
+import { articleApi, articleViewApi } from '@/api'
 import { renderArticleContent } from '@/utils/markdown'
 import { formatDate, getArticleDate } from '@/utils/date'
 
@@ -60,6 +64,15 @@ const loadArticle = async () => {
     const response = await articleApi.getDetail(route.params.slug as string)
     if (response.success && response.data) {
       article.value = response.data
+      
+      // 增加浏览次数（静默调用，不等待结果）
+      articleViewApi.increment(route.params.slug as string).then(count => {
+        if (article.value) {
+          article.value.view_count = count
+        }
+      }).catch(err => {
+        console.error('Failed to increment view count:', err)
+      })
     } else {
       article.value = null
     }
@@ -123,11 +136,22 @@ onMounted(() => {
   margin-bottom: 40px;
   padding-bottom: 20px;
   border-bottom: 2px solid rgba(24, 160, 88, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .publish-date {
   font-size: 14px;
   color: #18a058;
+}
+
+.view-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #666;
 }
 
 .post-body {

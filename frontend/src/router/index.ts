@@ -102,6 +102,11 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-donation',
         component: () => import('@/views/admin/donation/DonationSettings.vue'),
       },
+      {
+        path: 'ai-chat',
+        name: 'admin-ai-chat',
+        component: () => import('@/views/admin/AIChat.vue'),
+      },
     ],
   },
   {

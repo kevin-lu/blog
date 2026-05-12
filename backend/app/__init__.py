@@ -37,7 +37,7 @@ def create_app(config_name=None):
     api.init_app(app)
     
     # Register blueprints
-    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations
+    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(articles.bp, url_prefix='/api/v1/articles')
@@ -47,6 +47,7 @@ def create_app(config_name=None):
     app.register_blueprint(settings.bp, url_prefix='/api/v1/settings')
     app.register_blueprint(upload.bp, url_prefix='/api/v1/upload')
     app.register_blueprint(donations.bp, url_prefix='/api/v1/donations')
+    app.register_blueprint(ai_chat.bp, url_prefix='/api/v1/ai')
     
     # Register route to serve uploaded files
     @app.route('/uploads/<path:filename>')

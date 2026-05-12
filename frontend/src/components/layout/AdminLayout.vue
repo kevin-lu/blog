@@ -54,6 +54,9 @@
         <router-view />
       </n-layout-content>
     </n-layout>
+    
+    <!-- AI Chat Floating Component -->
+    <AIChatFloating />
   </n-layout>
 </template>
 
@@ -73,8 +76,10 @@ import {
   ChatbubbleOutline,
   SettingsOutline,
   HeartOutline,
+  SparklesOutline,
 } from '@vicons/ionicons5'
 import UserInfo from '@/components/common/UserInfo.vue'
+import AIChatFloating from '@/components/common/AIChatFloating.vue'
 
 const router = useRouter()
 const route = useRoute()

@@ -37,7 +37,7 @@ def create_app(config_name=None):
     api.init_app(app)
     
     # Register blueprints
-    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, articles_view
+    from .api.v1 import auth, articles, categories, tags, comments, settings, upload
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(articles.bp, url_prefix='/api/v1/articles')
@@ -46,7 +46,6 @@ def create_app(config_name=None):
     app.register_blueprint(comments.bp, url_prefix='/api/v1/comments')
     app.register_blueprint(settings.bp, url_prefix='/api/v1/settings')
     app.register_blueprint(upload.bp, url_prefix='/api/v1/upload')
-    app.register_blueprint(articles_view.bp, url_prefix='/api/v1/articles')
     
     # Create database tables
     with app.app_context():

@@ -39,7 +39,12 @@ export const donationApi = {
     }
     
     // Don't set Content-Type header manually - let axios set it with boundary
-    const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData)
+    // Remove default 'application/json' header by setting to undefined
+    const result = await apiClient.post<{ url: string }>('/donations/upload-qr', formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    })
     console.log('[Donation API] Upload result:', result)
     return result
   },

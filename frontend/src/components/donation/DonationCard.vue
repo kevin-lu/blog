@@ -1,6 +1,6 @@
 <template>
   <n-card
-    v-if="settings && settings.enabled"
+    v-if="displaySettings && displaySettings.enabled"
     class="donation-card"
     title="❤️ 支持博主"
     content-style="padding: 16px;"
@@ -8,8 +8,8 @@
     <div class="donation-content">
       <!-- 诗意文案 -->
       <div class="donation-text">
-        <p v-if="settings.description">
-          {{ settings.description }}
+        <p v-if="displaySettings.description">
+          {{ displaySettings.description }}
         </p>
         <p v-else>
           代码编织梦想，分享传递价值<br />
@@ -20,21 +20,21 @@
       <!-- 收款码展示 -->
       <div class="qr-codes">
         <div
-          v-if="settings.wechat_qr"
+          v-if="displaySettings.wechat_qr"
           class="qr-item"
-          @click="showQr(settings.wechat_qr, 'wechat')"
+          @click="showQr(displaySettings.wechat_qr, 'wechat')"
         >
-          <img :src="settings.wechat_qr" alt="微信收款码" class="qr-image" />
+          <img :src="displaySettings.wechat_qr" alt="微信收款码" class="qr-image" />
           <n-tag type="success" size="small" style="margin-top: 8px">
             微信
           </n-tag>
         </div>
         <div
-          v-if="settings.alipay_qr"
+          v-if="displaySettings.alipay_qr"
           class="qr-item"
-          @click="showQr(settings.alipay_qr, 'alipay')"
+          @click="showQr(displaySettings.alipay_qr, 'alipay')"
         >
-          <img :src="settings.alipay_qr" alt="支付宝收款码" class="qr-image" />
+          <img :src="displaySettings.alipay_qr" alt="支付宝收款码" class="qr-image" />
           <n-tag type="warning" size="small" style="margin-top: 8px">
             支付宝
           </n-tag>
@@ -55,27 +55,63 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { donationApi } from '@/api'
 import type { DonationSetting } from '@/types'
 import DonationModal from './DonationModal.vue'
 import { resolveServerAssetUrl } from '@/utils/assets'
 
+interface DonationCardSettingsOverride {
+  title?: string
+  description?: string | null
+  wechat_qr?: unknown
+  alipay_qr?: unknown
+  enabled?: boolean
+}
+
+const props = defineProps<{
+  settingsOverride?: DonationCardSettingsOverride | null
+}>()
+
 const settings = ref<DonationSetting | null>(null)
 const modalRef = ref<InstanceType<typeof DonationModal>>()
+
+const displaySettings = computed(() => {
+  if (props.settingsOverride) {
+    return {
+      id: 0,
+      title: props.settingsOverride.title || '支持博主',
+      description: props.settingsOverride.description || '',
+      wechat_qr: resolveServerAssetUrl(props.settingsOverride.wechat_qr),
+      alipay_qr: resolveServerAssetUrl(props.settingsOverride.alipay_qr),
+      enabled: props.settingsOverride.enabled ?? true,
+      created_at: '',
+      updated_at: '',
+    }
+  }
+  return settings.value
+})
 
 const showQr = (qr: string, type: 'wechat' | 'alipay') => {
   modalRef.value?.open(resolveServerAssetUrl(qr), type)
 }
 
 onMounted(async () => {
+  if (props.settingsOverride) {
+    return
+  }
+
   try {
     const data = await donationApi.getSettings()
-    settings.value = data ? {
-      ...data,
-      wechat_qr: resolveServerAssetUrl(data.wechat_qr),
-      alipay_qr: resolveServerAssetUrl(data.alipay_qr),
-    } : data
+    console.log('[DonationCard] Raw data:', data)
+    if (data) {
+      settings.value = {
+        ...data,
+        wechat_qr: resolveServerAssetUrl(data.wechat_qr || ''),
+        alipay_qr: resolveServerAssetUrl(data.alipay_qr || ''),
+      }
+      console.log('[DonationCard] Processed settings:', settings.value)
+    }
   } catch (error) {
     console.error('Failed to load donation settings:', error)
   }

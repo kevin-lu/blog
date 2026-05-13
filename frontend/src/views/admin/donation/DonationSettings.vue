@@ -101,7 +101,15 @@
 
     <n-card title="预览" style="margin-top: 16px">
       <div class="preview-section">
-        <DonationCard />
+        <DonationCard
+          :settings-override="{
+            title: formData.title,
+            description: formData.description,
+            wechat_qr: formData.wechat_qr,
+            alipay_qr: formData.alipay_qr,
+            enabled: formData.enabled,
+          }"
+        />
       </div>
     </n-card>
   </div>

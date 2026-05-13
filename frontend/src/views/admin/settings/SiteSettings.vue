@@ -40,10 +40,9 @@
           <n-form-item label="站点 Logo">
             <div class="upload-field">
               <n-upload
-                :action="uploadUrl"
-                :headers="uploadHeaders"
+                :custom-request="handleLogoUpload"
                 :show-file-list="false"
-                @finish="handleLogoUpload"
+                accept="image/*"
               >
                 <n-button>
                   <template #icon>
@@ -62,6 +61,35 @@
                   移除
                 </n-button>
               </div>
+            </div>
+          </n-form-item>
+
+          <n-form-item label="站点头像">
+            <div class="upload-field">
+              <div class="avatar-preview">
+                <img
+                  v-if="formData.siteAvatar"
+                  :src="formData.siteAvatar"
+                  alt="站点头像"
+                  class="avatar-preview-image"
+                />
+                <div v-else class="avatar-placeholder">
+                  <n-icon :component="PersonOutline" size="48" />
+                  <n-text depth="3">未上传</n-text>
+                </div>
+              </div>
+              <n-upload
+                :custom-request="handleAvatarUpload"
+                :show-file-list="false"
+                accept="image/*"
+              >
+                <n-button style="width: 100%; margin-top: 12px">
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  上传头像
+                </n-button>
+              </n-upload>
             </div>
           </n-form-item>
 
@@ -312,10 +340,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { CloudUploadOutline } from '@vicons/ionicons5'
+import { CloudUploadOutline, PersonOutline } from '@vicons/ionicons5'
 import { settingApi } from '@/api/setting'
+import { resolveServerAssetUrl } from '@/utils/assets'
 
 const message = useMessage()
 const saving = ref(false)
@@ -327,6 +356,7 @@ const formData = reactive({
   siteName: '',
   siteDescription: '',
   siteLogo: '',
+  siteAvatar: '',
   siteUrl: '',
   siteKeywords: '',
   ogImage: '',
@@ -354,21 +384,61 @@ const formData = reactive({
   commentEnabled: true,
 })
 
-const uploadUrl = '/api/v1/upload'
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-}))
-
-const handleLogoUpload = ({ event }: any) => {
-  const response = JSON.parse(event.target.response)
-  formData.siteLogo = response.url
-  message.success('Logo 上传成功')
+const handleLogoUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.siteLogo = resolveServerAssetUrl(result.url)
+    message.success('Logo 上传成功')
+  } catch (error: any) {
+    console.error('[Upload] Logo error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
 }
 
-const handleOgImageUpload = ({ event }: any) => {
-  const response = JSON.parse(event.target.response)
-  formData.ogImage = response.url
-  message.success('OG 图片上传成功')
+const handleAvatarUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.siteAvatar = resolveServerAssetUrl(result.url)
+    message.success('头像上传成功')
+  } catch (error: any) {
+    console.error('[Upload] Avatar error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
+}
+
+const handleOgImageUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.ogImage = resolveServerAssetUrl(result.url)
+    message.success('OG 图片上传成功')
+  } catch (error: any) {
+    console.error('[Upload] OG Image error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
+}
+
+const uploadFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', 'image')
+  
+  const response = await fetch('/api/v1/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+    },
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || '上传失败')
+  }
+  
+  return await response.json()
 }
 
 const handleSave = async () => {
@@ -379,6 +449,7 @@ const handleSave = async () => {
       site_name: formData.siteName,
       site_description: formData.siteDescription,
       site_logo: formData.siteLogo,
+      site_avatar: formData.siteAvatar,
       site_url: formData.siteUrl,
       site_keywords: formData.siteKeywords,
       og_image: formData.ogImage,
@@ -423,10 +494,11 @@ const loadSettings = async () => {
       // Basic Settings
       siteName: settings.site_name,
       siteDescription: settings.site_description,
-      siteLogo: settings.site_logo,
+      siteLogo: resolveServerAssetUrl(settings.site_logo) || '',
+      siteAvatar: resolveServerAssetUrl(settings.site_avatar) || '',
       siteUrl: settings.site_url,
       siteKeywords: settings.site_keywords,
-      ogImage: settings.og_image,
+      ogImage: resolveServerAssetUrl(settings.og_image) || '',
       
       // Social Links
       githubUrl: settings.github_url,
@@ -493,8 +565,35 @@ onMounted(() => {
 
 .upload-field {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-preview {
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
+  width: 200px;
+  height: 200px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 2px dashed #d9d9d9;
+  margin-bottom: 12px;
+}
+
+.avatar-preview-image {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #999;
 }
 
 .preview {

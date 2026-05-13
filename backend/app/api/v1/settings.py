@@ -18,6 +18,7 @@ DEFAULT_SETTINGS = {
     'site_url': '',
     'site_keywords': '',
     'og_image': '',
+    'site_avatar': '',
     'github_url': '',
     'twitter_url': '',
     'weibo_url': '',

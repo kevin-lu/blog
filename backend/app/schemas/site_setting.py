@@ -19,6 +19,7 @@ class SiteSettingUpdate(BaseModel):
     site_url: Optional[str] = None
     site_keywords: Optional[str] = None
     og_image: Optional[str] = None
+    site_avatar: Optional[str] = None
     
     # Social Links
     github_url: Optional[str] = None
@@ -52,6 +53,7 @@ class SiteSettingResponse(BaseModel):
     site_url: str = ""
     site_keywords: str = ""
     og_image: str = ""
+    site_avatar: str = ""
     
     # Social Links
     github_url: str = ""

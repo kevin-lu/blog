@@ -8,6 +8,7 @@ export interface SiteSettings {
   site_url: string
   site_keywords: string
   og_image: string
+  site_avatar: string
 
   // Social Links
   github_url: string

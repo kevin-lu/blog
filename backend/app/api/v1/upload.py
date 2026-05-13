@@ -118,9 +118,11 @@ def upload_file():
     # Determine upload folder
     file_type = request.form.get('type', 'document')
     if file_type == 'image':
-        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'images')
+        relative_folder = 'images'
+        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], relative_folder)
     else:
-        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'documents')
+        relative_folder = 'documents'
+        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], relative_folder)
     
     # Create folder if not exists
     os.makedirs(upload_folder, exist_ok=True)
@@ -138,10 +140,10 @@ def upload_file():
         # Generate thumbnail
         thumbnail_path = generate_thumbnail(file_path)
         if thumbnail_path:
-            thumbnail_url = f"/uploads/images/{os.path.basename(thumbnail_path)}"
+            thumbnail_url = f"/uploads/{relative_folder}/{os.path.basename(thumbnail_path)}"
     
     # Generate URL
-    file_url = f"/{file_type}s/{os.path.basename(file_path)}"
+    file_url = f"/uploads/{relative_folder}/{os.path.basename(file_path)}"
     
     return jsonify({
         'url': file_url,

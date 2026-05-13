@@ -84,7 +84,7 @@ def refresh():
             "access_token": "new JWT access token"
         }
     """
-    admin_id = get_jwt_identity()
+    admin_id = int(get_jwt_identity())
     admin = Admin.query.get(admin_id)
     
     if not admin:
@@ -92,7 +92,7 @@ def refresh():
     
     # Generate new access token
     access_token = create_access_token(
-        identity=admin.id,
+        identity=str(admin.id),
         additional_claims={
             'username': admin.username,
             'role': admin.role

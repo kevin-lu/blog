@@ -22,6 +22,9 @@
           </n-input>
         </div>
 
+        <!-- Tag Filter -->
+        <TagFilter />
+
         <!-- Article List -->
         <ArticleList />
       </div>
@@ -40,6 +43,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { SearchOutline } from '@vicons/ionicons5'
 import ArticleList from '@/components/article/ArticleList.vue'
 import Sidebar from '@/components/article/Sidebar.vue'
+import TagFilter from '@/components/article/TagFilter.vue'
 
 const router = useRouter()
 const route = useRoute()

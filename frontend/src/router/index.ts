@@ -29,16 +29,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/blog/CategoryPosts.vue'),
       },
       {
-        path: '/tags',
-        name: 'tags',
-        component: () => import('@/views/blog/Tags.vue'),
-      },
-      {
-        path: '/tags/:name',
-        name: 'tag-posts',
-        component: () => import('@/views/blog/TagPosts.vue'),
-      },
-      {
         path: '/about',
         name: 'about',
         component: () => import('@/views/blog/About.vue'),

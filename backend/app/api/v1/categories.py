@@ -25,7 +25,7 @@ def get_categories():
     categories = Category.query.order_by(Category.sort_order, Category.name).all()
     
     return jsonify({
-        'categories': [category.to_dict() for category in categories]
+        'categories': [category.to_dict(include_article_count=True) for category in categories]
     }), 200
 
 

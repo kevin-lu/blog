@@ -11,7 +11,6 @@
         <nav class="nav desktop-nav">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/categories" class="nav-link">分类</router-link>
-          <router-link to="/tags" class="nav-link">标签</router-link>
           <router-link to="/about" class="nav-link">关于</router-link>
         </nav>
 
@@ -29,7 +28,6 @@
         <nav v-if="menuOpen" class="mobile-nav">
           <router-link to="/" class="nav-link" @click="menuOpen = false">首页</router-link>
           <router-link to="/categories" class="nav-link" @click="menuOpen = false">分类</router-link>
-          <router-link to="/tags" class="nav-link" @click="menuOpen = false">标签</router-link>
           <router-link to="/about" class="nav-link" @click="menuOpen = false">关于</router-link>
         </nav>
       </transition>

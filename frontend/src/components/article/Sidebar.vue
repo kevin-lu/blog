@@ -5,7 +5,7 @@
       <div class="profile-content">
         <div class="avatar">
           <n-avatar
-            :src="siteSettings.avatar"
+            :src="siteSettings.site_avatar"
             fallback-src="/default-avatar.png"
             round
             size="large"
@@ -16,21 +16,21 @@
           </n-avatar>
         </div>
 
-        <h3 class="site-name">{{ siteSettings.name }}</h3>
-        <p class="site-description">{{ siteSettings.description }}</p>
+        <h3 class="site-name">{{ siteSettings.site_name }}</h3>
+        <p class="site-description">{{ siteSettings.site_description }}</p>
 
         <div class="social-links">
           <a
-            v-if="siteSettings.github"
-            :href="siteSettings.github"
+            v-if="siteSettings.github_url"
+            :href="siteSettings.github_url"
             target="_blank"
             class="social-link"
           >
             <n-icon :component="LogoGithub" size="20" />
           </a>
           <a
-            v-if="siteSettings.twitter"
-            :href="siteSettings.twitter"
+            v-if="siteSettings.twitter_url"
+            :href="siteSettings.twitter_url"
             target="_blank"
             class="social-link"
           >
@@ -65,23 +65,6 @@
       </div>
     </n-card>
 
-    <!-- Tags -->
-    <n-card class="tags-card" title="标签" content-style="padding: 16px;">
-      <div class="tag-cloud">
-        <n-tag
-          v-for="tag in tags"
-          :key="tag.id"
-          :bordered="false"
-          round
-          checkable
-          :checked="activeTag === tag.slug"
-          @click="goToTag(tag.slug)"
-        >
-          {{ tag.name }}
-        </n-tag>
-      </div>
-    </n-card>
-
     <!-- Donation Card -->
     <DonationCard />
   </div>
@@ -96,37 +79,50 @@ import {
   LogoTwitter,
   MailOutline,
 } from '@vicons/ionicons5'
-import type { Category, Tag } from '@/types'
-import { categoryApi, tagApi } from '@/api'
+import type { Category } from '@/types'
+import { categoryApi, settingApi } from '@/api'
 import DonationCard from '@/components/donation/DonationCard.vue'
+import { resolveServerAssetUrl } from '@/utils/assets'
 
 const router = useRouter()
 const route = useRoute()
 
 const categories = ref<Category[]>([])
-const tags = ref<Tag[]>([])
 
 const siteSettings = ref({
-  name: '我的博客',
-  description: '记录技术，分享生活',
-  avatar: '',
-  github: '',
-  twitter: '',
+  site_name: '我的博客',
+  site_description: '技术分享平台',
+  site_avatar: '',
+  github_url: '',
+  twitter_url: '',
   email: '',
 })
 
 const activeCategory = ref('')
-const activeTag = ref('')
 
 const goToCategory = (slug: string) => {
   router.push(`/categories/${slug}`)
 }
 
-const goToTag = (slug: string) => {
-  router.push(`/tags/${slug}`)
-}
-
 onMounted(async () => {
+  // Load site settings
+  try {
+    const response = await settingApi.get()
+    const settings = response.settings
+    console.log('[Sidebar] Raw settings:', settings)
+    siteSettings.value = {
+      site_name: settings.site_name || '我的博客',
+      site_description: settings.site_description || '技术分享平台',
+      site_avatar: resolveServerAssetUrl(settings.site_avatar || ''),
+      github_url: settings.github_url || '',
+      twitter_url: settings.twitter_url || '',
+      email: settings.email || '',
+    }
+    console.log('[Sidebar] Processed settings:', siteSettings.value)
+  } catch (error) {
+    console.error('Failed to load site settings:', error)
+  }
+
   // Load categories
   try {
     const response = await categoryApi.getList()
@@ -135,20 +131,9 @@ onMounted(async () => {
     console.error('Failed to load categories:', error)
   }
 
-  // Load tags
-  try {
-    const response = await tagApi.getList()
-    tags.value = response.data
-  } catch (error) {
-    console.error('Failed to load tags:', error)
-  }
-
   // Set active from route
   if (route.params.name && route.path.includes('/categories/')) {
     activeCategory.value = route.params.name as string
-  }
-  if (route.params.name && route.path.includes('/tags/')) {
-    activeTag.value = route.params.name as string
   }
 })
 </script>
@@ -161,8 +146,7 @@ onMounted(async () => {
 }
 
 .profile-card,
-.categories-card,
-.tags-card {
+.categories-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 12px;
@@ -222,8 +206,7 @@ onMounted(async () => {
   color: white;
 }
 
-.categories-card :deep(.n-card__header),
-.tags-card :deep(.n-card__header) {
+.categories-card :deep(.n-card__header) {
   font-size: 18px;
   font-weight: 600;
   color: #18a058;
@@ -258,28 +241,5 @@ onMounted(async () => {
 .category-name {
   font-size: 14px;
   color: #333;
-}
-
-.tag-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-cloud .n-tag {
-  cursor: pointer;
-  transition: all 0.2s;
-  background: rgba(24, 160, 88, 0.08);
-  color: #18a058;
-}
-
-.tag-cloud .n-tag:hover {
-  transform: scale(1.05);
-  background: rgba(24, 160, 88, 0.15);
-}
-
-.tag-cloud .n-tag.n-tag--checked {
-  background: #18a058;
-  color: white;
 }
 </style>

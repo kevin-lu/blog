@@ -28,7 +28,10 @@ def enqueue_article(
     source_url: str,
     author: str = None,
     published_at: datetime = None,
-    priority: int = 0
+    priority: int = 0,
+    rewrite_strategy: str = 'standard',
+    template_type: str = 'tutorial',
+    auto_publish: bool = False
 ) -> AIQueue:
     """
     将文章加入 AI 改写队列
@@ -40,6 +43,9 @@ def enqueue_article(
         author: 作者
         published_at: 发布时间
         priority: 优先级
+        rewrite_strategy: 改写策略
+        template_type: 模板类型
+        auto_publish: 是否自动发布
         
     Returns:
         队列项
@@ -54,12 +60,17 @@ def enqueue_article(
         status='pending',
         priority=priority,
         max_retries=2,
+        rewrite_strategy=rewrite_strategy,
     )
+    
+    # 保存模板类型和自动发布标志到 extra_data (如果需要)
+    # 注意：AIQueue 模型目前没有 template_type 和 auto_publish 字段
+    # 如果需要在队列处理时使用这些参数，需要添加到模型或者在处理时从其他地方获取
     
     db.session.add(queue_item)
     db.session.commit()
     
-    logger.info(f"文章加入队列：{queue_item.queue_id}, 标题：{title[:50]}...")
+    logger.info(f"文章加入队列：{queue_item.queue_id}, 标题：{title[:50]}..., 策略：{rewrite_strategy}")
     
     # 检查队列是否积压
     check_queue_accumulation()
@@ -100,10 +111,13 @@ def process_ai_task(queue_item: AIQueue) -> bool:
         logger.info(f"开始处理 AI 任务：{queue_item.queue_id}")
         
         # 调用 MiniMax AI 改写（串行，带延迟）
+        # 使用队列中保存的改写策略
+        strategy = queue_item.rewrite_strategy or 'standard'
+        
         rewritten_content = call_minimax_ai_with_delay(
             title=queue_item.title,
             content=queue_item.original_content,
-            strategy='standard'
+            strategy=strategy
         )
         
         if not rewritten_content:
@@ -117,7 +131,7 @@ def process_ai_task(queue_item: AIQueue) -> bool:
             author=queue_item.author,
             published_at=queue_item.published_at,
             ai_model='minimax-abab6.5',
-            rewrite_strategy='standard',
+            rewrite_strategy=strategy,
         )
         
         # 更新队列状态
@@ -125,7 +139,7 @@ def process_ai_task(queue_item: AIQueue) -> bool:
         queue_item.article_id = article.id
         queue_item.rewritten_content = rewritten_content
         queue_item.ai_model = 'minimax-abab6.5'
-        queue_item.rewrite_strategy = 'standard'
+        queue_item.rewrite_strategy = strategy
         queue_item.completed_at = datetime.utcnow()
         
         db.session.commit()

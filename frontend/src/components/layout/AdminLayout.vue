@@ -77,6 +77,7 @@ import {
   SettingsOutline,
   HeartOutline,
   SparklesOutline,
+  CloudDownloadOutline,
 } from '@vicons/ionicons5'
 import UserInfo from '@/components/common/UserInfo.vue'
 import AIChatFloating from '@/components/common/AIChatFloating.vue'
@@ -133,6 +134,11 @@ const menuOptions: MenuOption[] = [
     label: '打赏设置',
     key: 'admin-donation',
     icon: renderIcon(HeartOutline),
+  },
+  {
+    label: '自动抓取',
+    key: 'admin-crawler',
+    icon: renderIcon(CloudDownloadOutline),
   },
 ]
 

@@ -36,6 +36,12 @@ pytest-cov==4.1.0
 python-dotenv==1.0.0
 python-dateutil==2.8.2
 
+# RSS Crawler
+feedparser==6.0.12
+
+# Scheduler
+APScheduler==3.10.4
+
 # Production Server
 gunicorn==21.2.0
 Werkzeug==3.0.1

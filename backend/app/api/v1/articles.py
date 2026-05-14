@@ -409,7 +409,7 @@ def update_article(slug):
 
 @bp.route('/<slug>', methods=['DELETE'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def delete_article(slug):
     """
     Delete article (requires authentication)
@@ -419,8 +419,26 @@ def delete_article(slug):
             "message": "Article deleted successfully"
         }
     """
+    from app.models.crawler import AIQueue
+    from app.models.article import ArticleCategory, ArticleTag
+    from app.models.comment import Comment
+    
     article = Article.query.filter_by(slug=slug).first_or_404()
     
+    # 先删除所有关联数据，避免外键约束错误
+    # 1. 删除 AI 队列记录
+    AIQueue.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 2. 删除分类关联
+    ArticleCategory.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 3. 删除标签关联
+    ArticleTag.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 4. 删除评论
+    Comment.query.filter_by(article_slug=slug).delete(synchronize_session=False)
+    
+    # 5. 删除文章
     db.session.delete(article)
     db.session.commit()
     

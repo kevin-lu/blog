@@ -53,6 +53,36 @@
         </n-space>
       </div>
 
+      <!-- Batch Actions -->
+      <div class="batch-actions" v-if="checkedRowKeys.length > 0">
+        <div class="selection-info">
+          已选择 <n-tag type="info" size="small">{{ checkedRowKeys.length }}</n-tag> 篇文章
+        </div>
+        <div class="action-buttons">
+          <n-button 
+            type="success" 
+            size="small" 
+            @click="handleBatchPublish"
+            :disabled="!hasDraftSelected"
+          >
+            批量发布
+          </n-button>
+          <n-button 
+            type="error" 
+            size="small" 
+            @click="handleBatchDelete"
+          >
+            批量删除
+          </n-button>
+          <n-button 
+            size="small" 
+            @click="handleClearSelection"
+          >
+            取消选择
+          </n-button>
+        </div>
+      </div>
+
       <!-- Table -->
       <n-data-table
         :columns="columns"
@@ -60,7 +90,7 @@
         :loading="loading"
         :pagination="pagination"
         :row-key="rowKey"
-        @update:checked-row-keys="handleCheck"
+        v-model:checked-row-keys="checkedRowKeys"
         @update:sorter="handleSort"
       />
     </n-card>
@@ -75,11 +105,22 @@
       negative-text="取消"
       @positive-click="confirmDelete"
     />
+    
+    <!-- Batch Delete Dialog -->
+    <n-modal
+      v-model:show="showBatchDeleteModal"
+      preset="dialog"
+      title="批量删除文章"
+      :content="`确定要删除选中的 ${checkedRowKeys.length} 篇文章吗？此操作不可恢复。`"
+      positive-text="确定"
+      negative-text="取消"
+      @positive-click="confirmBatchDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, h, onMounted } from 'vue'
+import { ref, reactive, h, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, NButton, NTag, NIcon } from 'naive-ui'
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
@@ -105,7 +146,9 @@ const message = useMessage()
 const loading = ref(false)
 const articles = ref<ArticleWithMeta[]>([])
 const showDeleteModal = ref(false)
+const showBatchDeleteModal = ref(false)
 const deleteArticle = ref<ArticleWithMeta | null>(null)
+const checkedRowKeys = ref<DataTableRowKey[]>([])
 const sortField = ref('published_at')
 const sortOrder = ref('desc')
 
@@ -274,10 +317,6 @@ const columns: DataTableColumns = [
   },
 ]
 
-const handleCheck = (checkedRowKeys: DataTableRowKey[]) => {
-  console.log('checkedRowKeys', checkedRowKeys)
-}
-
 const goToCreate = () => {
   router.push('/admin/articles/create')
 }
@@ -319,6 +358,67 @@ const confirmDelete = async () => {
   } finally {
     showDeleteModal.value = false
     deleteArticle.value = null
+  }
+}
+
+const handleClearSelection = () => {
+  checkedRowKeys.value = []
+}
+
+const hasDraftSelected = computed(() => {
+  return checkedRowKeys.value.some((id: DataTableRowKey) => {
+    const article = articles.value.find(a => a.id === id)
+    return article && article.status === 'draft'
+  })
+})
+
+const handleBatchPublish = async () => {
+  const draftIds = checkedRowKeys.value.filter((id: DataTableRowKey) => {
+    const article = articles.value.find(a => a.id === id)
+    return article && article.status === 'draft'
+  })
+  
+  if (draftIds.length === 0) {
+    message.warning('没有选中的草稿文章')
+    return
+  }
+  
+  try {
+    for (const id of draftIds) {
+      const article = articles.value.find(a => a.id === id)
+      if (article) {
+        await adminArticleApi.update(article.slug, { status: 'published' })
+      }
+    }
+    message.success(`成功发布 ${draftIds.length} 篇文章`)
+    checkedRowKeys.value = []
+    loadArticles()
+  } catch (error) {
+    console.error('Batch publish failed:', error)
+    message.error('批量发布失败')
+  }
+}
+
+const handleBatchDelete = () => {
+  if (checkedRowKeys.value.length === 0) return
+  showBatchDeleteModal.value = true
+}
+
+const confirmBatchDelete = async () => {
+  try {
+    for (const id of checkedRowKeys.value) {
+      const article = articles.value.find(a => a.id === id)
+      if (article) {
+        await adminArticleApi.delete(article.slug)
+      }
+    }
+    message.success(`成功删除 ${checkedRowKeys.value.length} 篇文章`)
+    checkedRowKeys.value = []
+    showBatchDeleteModal.value = false
+    loadArticles()
+  } catch (error: any) {
+    console.error('Batch delete failed:', error)
+    message.error('批量删除失败')
   }
 }
 
@@ -395,5 +495,28 @@ onMounted(() => {
 
 .filters {
   margin-bottom: 20px;
+}
+
+.batch-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f7f9;
+  border-radius: 4px;
+  margin-bottom: 16px;
+
+  .selection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
 }
 </style>

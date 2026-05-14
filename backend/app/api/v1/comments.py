@@ -57,7 +57,7 @@ def get_comments():
 
 @bp.route('/<int:id>', methods=['DELETE'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def delete_comment(id):
     """
     Delete comment (requires authentication)

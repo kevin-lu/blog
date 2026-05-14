@@ -113,7 +113,7 @@ def update_category(id):
 
 @bp.route('/<int:id>', methods=['DELETE'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def delete_category(id):
     """
     Delete category (requires authentication)

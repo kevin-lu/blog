@@ -97,6 +97,11 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-ai-chat',
         component: () => import('@/views/admin/AIChat.vue'),
       },
+      {
+        path: 'crawler',
+        name: 'admin-crawler',
+        component: () => import('@/views/admin/crawler/CrawlerManage.vue'),
+      },
     ],
   },
   {

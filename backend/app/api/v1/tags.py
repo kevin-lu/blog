@@ -103,7 +103,7 @@ def update_tag(id):
 
 @bp.route('/<int:id>', methods=['DELETE'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def delete_tag(id):
     """
     Delete tag (requires authentication)

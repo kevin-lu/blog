@@ -33,7 +33,7 @@ def get_donation_settings():
 
 @bp.route('', methods=['PUT'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def update_donation_settings():
     """
     Update donation settings (requires authentication)

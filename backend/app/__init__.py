@@ -37,7 +37,7 @@ def create_app(config_name=None):
     api.init_app(app)
     
     # Register blueprints
-    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat
+    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat, crawler, queue, scheduler
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(articles.bp, url_prefix='/api/v1/articles')
@@ -48,6 +48,9 @@ def create_app(config_name=None):
     app.register_blueprint(upload.bp, url_prefix='/api/v1/upload')
     app.register_blueprint(donations.bp, url_prefix='/api/v1/donations')
     app.register_blueprint(ai_chat.bp, url_prefix='/api/v1/ai')
+    app.register_blueprint(crawler.bp, url_prefix='/api/v1/crawler')
+    app.register_blueprint(queue.bp, url_prefix='/api/v1/queue')
+    app.register_blueprint(scheduler.bp, url_prefix='/api/v1/scheduler')
     
     # Register route to serve uploaded files
     @app.route('/uploads/<path:filename>')
@@ -59,6 +62,17 @@ def create_app(config_name=None):
     with app.app_context():
         db.create_all()
         ensure_database_schema()
+        
+        # Initialize scheduler
+        from .services.scheduler import init_scheduler
+        init_scheduler(app)
+        
+        # Initialize alert service
+        from .services.alert import init_alert_service
+        init_alert_service(
+            dingtalk_webhook=app.config.get('DINGTALK_WEBHOOK'),
+            wechat_webhook=app.config.get('WECHAT_WORK_WEBHOOK')
+        )
 
     return app
 

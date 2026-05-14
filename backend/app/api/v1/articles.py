@@ -257,7 +257,11 @@ def clear_ai_tasks():
 @jwt_required()
 @limiter.limit(lambda: current_app.config.get('AI_BATCH_RATE_LIMIT', '5 per hour'))
 def ai_batch_rewrite():
-    """批量提交 AI 改写任务 (支持微信合集)"""
+    """批量提交 AI 改写任务 (支持微信合集，并发控制)"""
+    import threading
+    import time
+    from app.services.ai_queue import enqueue_article as enqueue_article_service
+    
     data = request.get_json()
 
     if not data:
@@ -296,52 +300,86 @@ def ai_batch_rewrite():
         except Exception as e:
             return jsonify({'error': f'抓取合集失败：{str(e)}'}), 500
 
-    # 批量创建改写任务
+    # 并发控制配置
+    CONCURRENT_LIMIT = current_app.config.get('AI_CONCURRENT_LIMIT', 2)
+    REQUEST_DELAY = current_app.config.get('AI_REQUEST_DELAY', 2)
+    
+    logger.info(f"批量改写：共 {len(source_urls)} 篇文章，并发限制：{CONCURRENT_LIMIT} 个")
+
+    # 批量创建改写任务并立即处理
     tasks = []
-    for url in source_urls:
+    active_threads = []
+    semaphore = threading.Semaphore(CONCURRENT_LIMIT)
+    
+    def process_single_article(url, idx):
+        """处理单篇文章 (带信号量控制并发)"""
+        with semaphore:
+            try:
+                # 添加延迟，避免同时请求
+                if idx > 0:
+                    time.sleep(REQUEST_DELAY * (idx % CONCURRENT_LIMIT))
+                
+                # 抓取文章获取标题和内容
+                scraper = WechatAlbumScraper()
+                article_info = scraper.fetch_single_article_info(url)
+                title = article_info.get('title', '未知标题')
+                content = article_info.get('content', '')
+                
+                # 加入 AI 改写队列
+                queue_item = enqueue_article_service(
+                    title=title,
+                    original_content=content,
+                    source_url=url,
+                    author='码哥跳动',
+                    rewrite_strategy=rewrite_strategy,
+                    template_type=template_type,
+                    auto_publish=auto_publish,
+                    priority=0,
+                )
+                
+                tasks.append({
+                    'queueId': queue_item.queue_id,
+                    'title': title,
+                    'url': url,
+                    'status': 'processing',
+                })
+                
+                logger.info(f"批量改写任务已创建：{queue_item.queue_id}, 标题：{title[:50]}...")
+                
+            except Exception as e:
+                logger.error(f"批量改写任务创建失败：{url}, 错误：{e}")
+                tasks.append({
+                    'url': url,
+                    'status': 'failed',
+                    'error': str(e),
+                })
+    
+    # 创建并启动所有线程 (信号量会控制实际并发数)
+    threads = []
+    for idx, url in enumerate(source_urls):
         if not url.strip():
             continue
-            
-        try:
-            # 先抓取文章获取标题和内容
-            scraper = WechatAlbumScraper()
-            article_info = scraper.fetch_single_article_info(url)
-            title = article_info.get('title', '未知标题')
-            content = article_info.get('content', '')
-            
-            # 加入 AI 改写队列
-            from app.services.ai_queue import enqueue_article as enqueue_article_service
-            queue_item = enqueue_article_service(
-                title=title,
-                original_content=content,
-                source_url=url,
-                author='码哥跳动',
-                rewrite_strategy=rewrite_strategy,
-                template_type=template_type,
-                auto_publish=auto_publish,
-                priority=0,
-            )
-            
-            tasks.append({
-                'queueId': queue_item.queue_id,
-                'title': title,
-                'url': url,
-                'status': 'pending',
-            })
-            
-        except Exception as e:
-            tasks.append({
-                'url': url,
-                'status': 'failed',
-                'error': str(e),
-            })
+        
+        thread = threading.Thread(
+            target=process_single_article,
+            args=(url, idx),
+            daemon=True,
+        )
+        threads.append(thread)
+        thread.start()
+    
+    # 等待所有线程启动完成
+    for thread in threads:
+        thread.join(timeout=0.1)  # 非阻塞等待
+    
+    logger.info(f"批量改写任务全部启动，共 {len(tasks)} 个")
 
     return jsonify({
         'success': True,
         'data': {
             'total': len(tasks),
             'tasks': tasks,
-            'concurrentLimit': current_app.config.get('AI_CONCURRENT_LIMIT', 2),
+            'concurrentLimit': CONCURRENT_LIMIT,
         },
     }), 202
 

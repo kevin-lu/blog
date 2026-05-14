@@ -5,6 +5,7 @@ import threading
 from datetime import datetime, timezone
 from html import unescape
 import re
+import logging
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, verify_jwt_in_request, get_jwt_identity
@@ -16,6 +17,8 @@ from app.services.ai_rewrite import slugify, process_rewrite_task
 from app.services.ai_tasks import create_task, get_task, list_tasks, clear_finished_tasks
 from app.services.wechat_album_scraper import WechatAlbumScraper
 from app.services.ai_queue import enqueue_article
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('articles', __name__)
 
@@ -255,7 +258,7 @@ def clear_ai_tasks():
 
 @bp.route('/ai-batch', methods=['POST'])
 @jwt_required()
-@limiter.limit(lambda: current_app.config.get('AI_BATCH_RATE_LIMIT', '5 per hour'))
+@limiter.limit(lambda: current_app.config.get('AI_BATCH_RATE_LIMIT', '10 per hour'))
 def ai_batch_rewrite():
     """批量提交 AI 改写任务 (支持微信合集，并发控制)"""
     import threading

@@ -14,6 +14,8 @@ from app.models.category import Category
 from app.models.tag import Tag
 from app.services.ai_rewrite import slugify, process_rewrite_task
 from app.services.ai_tasks import create_task, get_task, list_tasks, clear_finished_tasks
+from app.services.wechat_album_scraper import WechatAlbumScraper
+from app.services.ai_queue import enqueue_article
 
 bp = Blueprint('articles', __name__)
 
@@ -249,6 +251,134 @@ def clear_ai_tasks():
     """Clear completed and failed AI tasks from memory."""
     cleared = clear_finished_tasks()
     return jsonify({'cleared': cleared}), 200
+
+
+@bp.route('/ai-batch', methods=['POST'])
+@jwt_required()
+@limiter.limit(lambda: current_app.config.get('AI_BATCH_RATE_LIMIT', '5 per hour'))
+def ai_batch_rewrite():
+    """批量提交 AI 改写任务 (支持微信合集)"""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    source_urls = data.get('sourceUrls', [])
+    album_url = data.get('albumUrl')
+    rewrite_strategy = data.get('rewriteStrategy', 'standard')
+    template_type = data.get('templateType', 'tutorial')
+    auto_publish = bool(data.get('autoPublish', False))
+
+    # 验证参数
+    if not source_urls and not album_url:
+        return jsonify({'error': '请提供文章链接列表或合集链接'}), 400
+
+    if rewrite_strategy not in ('standard', 'deep', 'creative'):
+        return jsonify({'error': '不支持的改写策略'}), 400
+    
+    if template_type not in ('tutorial', 'concept', 'comparison', 'practice'):
+        return jsonify({'error': '不支持的文章模板'}), 400
+
+    if not current_app.config.get('MINIMAX_API_KEY'):
+        return jsonify({'error': '后端未配置 MINIMAX_API_KEY'}), 400
+
+    # 如果是合集链接，先抓取文章列表
+    if album_url:
+        try:
+            scraper = WechatAlbumScraper()
+            articles = scraper.fetch_article_list(album_url)
+            
+            if not articles:
+                return jsonify({'error': '合集中没有找到文章'}), 404
+            
+            source_urls = [article['url'] for article in articles]
+            
+        except Exception as e:
+            return jsonify({'error': f'抓取合集失败：{str(e)}'}), 500
+
+    # 批量创建改写任务
+    tasks = []
+    for url in source_urls:
+        if not url.strip():
+            continue
+            
+        try:
+            # 先抓取文章获取标题和内容
+            scraper = WechatAlbumScraper()
+            article_info = scraper.fetch_single_article_info(url)
+            title = article_info.get('title', '未知标题')
+            content = article_info.get('content', '')
+            
+            # 加入 AI 改写队列
+            from app.services.ai_queue import enqueue_article as enqueue_article_service
+            queue_item = enqueue_article_service(
+                title=title,
+                original_content=content,
+                source_url=url,
+                author='码哥跳动',
+                rewrite_strategy=rewrite_strategy,
+                template_type=template_type,
+                auto_publish=auto_publish,
+                priority=0,
+            )
+            
+            tasks.append({
+                'queueId': queue_item.queue_id,
+                'title': title,
+                'url': url,
+                'status': 'pending',
+            })
+            
+        except Exception as e:
+            tasks.append({
+                'url': url,
+                'status': 'failed',
+                'error': str(e),
+            })
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'total': len(tasks),
+            'tasks': tasks,
+            'concurrentLimit': current_app.config.get('AI_CONCURRENT_LIMIT', 2),
+        },
+    }), 202
+
+
+@bp.route('/album/articles', methods=['GET'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def get_album_articles():
+    """获取微信合集文章列表"""
+    album_url = request.args.get('url')
+    
+    if not album_url:
+        return jsonify({'error': '请提供合集链接'}), 400
+    
+    try:
+        scraper = WechatAlbumScraper()
+        
+        # 抓取合集信息
+        album_info = scraper.fetch_album_info(album_url)
+        
+        # 抓取文章列表
+        articles = scraper.fetch_article_list(album_url)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'album': album_info,
+                'articles': articles,
+            },
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'抓取失败：{str(e)}',
+        }), 500
+
 
 
 @bp.route('', methods=['POST'])

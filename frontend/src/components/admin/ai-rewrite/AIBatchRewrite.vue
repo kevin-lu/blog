@@ -146,7 +146,7 @@ async function fetchAlbumArticles() {
       `/api/v1/articles/album/articles?url=${encodeURIComponent(form.value.albumUrl)}`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
       }
     )
@@ -204,7 +204,7 @@ async function submitBatchRewrite() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
       },
       body: JSON.stringify({
         sourceUrls: selectedArticles.map(a => a.url),

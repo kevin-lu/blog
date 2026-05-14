@@ -43,6 +43,7 @@
                 <n-checkbox
                   :checked="article.selected"
                   @update:checked="article.selected = $event"
+                  @click.stop
                 />
               </template>
               <n-thing :title="article.title">

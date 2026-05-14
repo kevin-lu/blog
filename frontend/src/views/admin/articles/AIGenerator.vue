@@ -7,17 +7,24 @@
       </div>
     </div>
 
-    <n-grid :cols="24" :x-gap="24" :y-gap="24" responsive="screen">
-      <n-gi :span="24" :md="12">
-        <AIRewritePanel />
-      </n-gi>
-      <n-gi :span="24" :md="12">
-        <AIProgress />
-      </n-gi>
-      <n-gi :span="24">
-        <AITaskList />
-      </n-gi>
-    </n-grid>
+    <n-tabs type="line" animated>
+      <n-tab-pane name="single" tab="单篇改写">
+        <n-grid :cols="24" :x-gap="24" :y-gap="24" responsive="screen">
+          <n-gi :span="24" :md="12">
+            <AIRewritePanel />
+          </n-gi>
+          <n-gi :span="24" :md="12">
+            <AIProgress />
+          </n-gi>
+          <n-gi :span="24">
+            <AITaskList />
+          </n-gi>
+        </n-grid>
+      </n-tab-pane>
+      <n-tab-pane name="batch" tab="批量改写">
+        <AIBatchRewrite />
+      </n-tab-pane>
+    </n-tabs>
   </div>
 </template>
 
@@ -26,6 +33,7 @@ import { onMounted, onBeforeUnmount } from 'vue'
 import AIRewritePanel from '@/components/admin/ai-rewrite/AIRewritePanel.vue'
 import AIProgress from '@/components/admin/ai-rewrite/AIProgress.vue'
 import AITaskList from '@/components/admin/ai-rewrite/AITaskList.vue'
+import AIBatchRewrite from '@/components/admin/ai-rewrite/AIBatchRewrite.vue'
 import { useAIRewriteStore } from '@/stores/ai-rewrite'
 
 const store = useAIRewriteStore()

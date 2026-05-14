@@ -65,6 +65,13 @@ class Config:
         '30 per minute' if os.environ.get('FLASK_ENV', 'development') == 'development' else '5 per hour'
     )
     
+    # AI Queue Configuration
+    AI_CONCURRENT_LIMIT = int(os.environ.get('AI_CONCURRENT_LIMIT', '2'))  # 最大并发数
+    AI_REQUEST_DELAY = int(os.environ.get('AI_REQUEST_DELAY', '2'))        # 请求间隔 (秒)
+    AI_MAX_RETRIES = int(os.environ.get('AI_MAX_RETRIES', '2'))            # 最大重试次数
+    AI_TIMEOUT = int(os.environ.get('AI_TIMEOUT', '300'))                  # 超时时间 (秒)
+    AI_BATCH_RATE_LIMIT = os.environ.get('AI_BATCH_RATE_LIMIT', '5 per hour')
+    
     # Swagger
     SWAGGER_UI_DOC_EXPANSION = 'list'
     

@@ -344,13 +344,17 @@ async function pollTaskProgress() {
     if (data.tasks) {
       // 更新批量任务状态
       batchTasks.value = batchTasks.value.map(task => {
-        const matchedTask = data.tasks.find((t: any) => t.queue_id === task.queueId || t.id === task.queueId)
+        // 匹配 taskId 或 id
+        const matchedTask = data.tasks.find((t: any) => 
+          t.id === task.queueId || t.taskId === task.queueId
+        )
         if (matchedTask) {
           return {
             ...task,
             status: matchedTask.status,
             progress: matchedTask.progress || 0,
             article_slug: matchedTask.article_slug,
+            title: matchedTask.title || task.title,
           }
         }
         return task
@@ -388,6 +392,45 @@ function stopPolling() {
 watch(() => articles.value, () => {
   updateSelectedCount()
 }, { deep: true })
+
+// 加载历史任务
+async function loadHistoryTasks() {
+  try {
+    const response = await fetch('/api/v1/articles/ai-progress', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+    const data = await response.json()
+    
+    if (data.tasks && data.tasks.length > 0) {
+      // 只显示最近 20 条 pending 或 processing 状态的任务
+      const recentTasks = data.tasks
+        .filter((t: any) => t.status === 'pending' || t.status === 'processing')
+        .slice(0, 20)
+        .map((t: any) => ({
+          queueId: t.id,
+          title: t.title || '处理中...',
+          url: t.source_url,
+          status: t.status,
+          progress: t.progress || 0,
+          article_slug: t.article_slug,
+        }))
+      
+      if (recentTasks.length > 0) {
+        batchTasks.value = recentTasks
+        startPolling()
+      }
+    }
+  } catch (error: any) {
+    console.error('加载历史任务失败:', error)
+  }
+}
+
+// 组件挂载时加载历史任务并开始轮询
+onMounted(() => {
+  loadHistoryTasks()
+})
 
 // 组件卸载时停止轮询
 onUnmounted(() => {

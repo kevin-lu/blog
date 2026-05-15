@@ -38,72 +38,159 @@ WECHAT_REQUEST_HEADERS = (
 )
 
 
+def extract_images_from_html(html: str) -> list:
+    """从 HTML 中提取所有图片信息"""
+    if not html:
+        return []
+    
+    images = []
+    img_pattern = r'<img[^>]+src=["\']([^"\']+)["\'][^>]*(?:alt=["\']([^"\']*)["\'])?[^>]*>'
+    
+    for match in re.finditer(img_pattern, html, re.IGNORECASE):
+        src = match.group(1)
+        alt = match.group(2) or ''
+        
+        # 跳过过小的图片（可能是图标、表情等）
+        if any(skip in src.lower() for skip in ['emoji', 'icon', 'gif', 'spacer', 'blank']):
+            continue
+        
+        images.append({
+            'src': src,
+            'alt': alt,
+            'type': 'image'
+        })
+    
+    return images
+
+
 PROMPTS = {
     'standard': {
         'extract': """你是一个专业的技术编辑。请从以下文章中提取核心观点和技术要点。
 
 任务要求：
 1. 提取核心主题（1 句话）
-2. 列出 3-5 个关键观点
-3. 提取重要的技术细节和代码示例
-4. 忽略广告、推广等无关内容
+2. 详细列出所有关键观点（不要遗漏任何重要观点）
+3. 提取所有技术细节、代码示例、配置参数
+4. 提取文章中的所有案例、场景、数据
+5. 忽略广告、推广等无关内容
+
+重要：必须保留原文的所有技术细节和深度，不要简化！
 
 只输出提取结果，不要复述要求。""",
-        'rewrite': """你是一个轻松幽默的技术博主。请基于以下核心观点重新创作一篇文章。
+        'rewrite': """你是一个资深技术博主，擅长深入讲解技术。请基于以下核心观点重新创作一篇文章。
 
 写作要求：
-1. 使用自己的表达方式，完整重写
-2. 语言风格自然，像在给朋友讲技术
+1. 使用自己的表达方式，但必须保留所有技术细节和深度
+2. 语言风格自然，像在给朋友讲技术，但内容要详细
 3. 结构清晰，逻辑连贯
-4. 适当加入示例、经验和踩坑提醒
-5. 输出 Markdown 内容
+4. 保留所有代码示例、配置参数、技术术语
+5. 添加详细的示例、经验和踩坑提醒
+6. 每个观点都要详细展开，不要一笔带过
+7. 字数要求：至少 3000-5000 字，确保内容充实
+8. 输出 Markdown 内容
+
+禁止：
+- 不要过度简化内容
+- 不要省略技术细节
+- 不要删除代码示例
+- 不要合并或压缩段落
 
 直接开始写文章，不要说废话。""",
         'layout': """你是一个技术内容排版编辑。请把下面文章整理成适合博客发布的 Markdown。
 
 规则：
 1. 生成一个一级标题
-2. 使用二级、三级标题组织结构
+2. 使用二级、三级、四级标题组织结构
 3. 关键术语加粗
-4. 代码使用 fenced code block
-5. 直接输出最终 Markdown
+4. 代码使用 fenced code block，并添加详细注释
+5. 重要提示使用引用块（>）突出显示
+6. 对比内容使用表格
+7. 复杂流程使用 Mermaid 图表表示
+8. 直接输出最终 Markdown
+
+注意：保留所有技术细节，不要删除任何内容。
 """,
     },
     'deep': {
-        'extract': """你是一个资深技术分析师。请提炼下面文章的关键技术结论、优缺点和适用场景。
+        'extract': """你是一个资深技术分析师。请详细提炼下面文章的所有技术内容。
+
+任务要求：
+1. 提取所有核心技术原理和实现细节
+2. 列出所有优缺点分析
+3. 提取所有适用场景和局限性
+4. 保留所有技术术语、参数、配置
+5. 提取文中的案例、数据、对比
+
+重要：必须详细、完整，不要遗漏任何技术细节！
 
 只输出分析结果，不要解释过程。""",
-        'rewrite': """你是一个经验丰富的技术专家。请基于给出的要点，写一篇更深入的技术分析文章。
+        'rewrite': """你是一个经验丰富的技术专家，擅长深度技术分析。请基于给出的要点，写一篇深入的技术分析文章。
 
 要求：
-1. 强调原理、优缺点和落地建议
-2. 增加案例分析和避坑建议
-3. 使用 Markdown
-4. 直接开始写正文
+1. 详细讲解技术原理和实现细节
+2. 保留所有优缺点分析和对比
+3. 增加详细的案例分析和避坑建议
+4. 给出实际应用场景和落地建议
+5. 每个技术点都要深入展开，不要浅尝辄止
+6. 字数要求：4000-6000 字，确保深度和广度
+7. 使用 Markdown
+8. 直接开始写正文
+
+禁止：
+- 不要简化技术内容
+- 不要省略实现细节
+- 不要删除对比分析
+- 不要合并技术要点
 """,
         'layout': """请将内容整理成面向技术博客的 Markdown。
 
 要求：
-1. 一级标题 + 多级章节标题
-2. 增加“最佳实践”或“常见问题”小节
-3. 直接输出整理后的 Markdown
+1. 一级标题 + 多级章节标题（H2/H3/H4）
+2. 增加"最佳实践"、"常见问题"、"避坑指南"等实用章节
+3. 代码示例添加详细注释
+4. 对比内容使用表格展示
+5. 复杂流程使用 Mermaid 流程图
+6. 重点提示使用引用块突出
+7. 直接输出整理后的 Markdown
+
+注意：保持技术深度，不要删除任何细节。
 """,
     },
     'creative': {
-        'extract': """请提取这篇文章讨论的主题、问题和核心思路。
+        'extract': """请详细提取这篇文章的所有技术内容。
 
-只保留主题方向，不要输出冗长解释。""",
+任务要求：
+1. 提取讨论的技术主题和问题
+2. 提取所有核心思路和技术方案
+3. 保留所有技术细节、代码、参数
+4. 提取文中的案例、场景、数据
+
+详细提取，不要遗漏重要内容。""",
         'rewrite': """你是一个有个人风格的技术博主。请围绕这些主题完全原创一篇新文章。
 
 要求：
-1. 保留主题，但表达、结构和例子都重新创作
-2. 文风更轻松、有观点
-3. 使用 Markdown
-4. 直接输出文章
+1. 保留所有技术主题和核心内容，但表达和结构重新创作
+2. 保留所有技术细节、代码示例、配置参数
+3. 文风可以轻松，但技术内容必须详细深入
+4. 添加个人见解、经验和案例
+5. 字数要求：3000-5000 字
+6. 使用 Markdown
+7. 直接输出文章
+
+禁止：
+- 不要简化技术内容
+- 不要省略关键细节
+- 不要删除代码示例
 """,
         'layout': """请把文章整理成适合发布的 Markdown，保证标题、列表、引用和代码块清晰。
 
-只输出最终 Markdown。""",
+要求：
+1. 使用多级标题组织内容
+2. 代码块添加语言标识和注释
+3. 重点内容加粗或使用引用块
+4. 复杂流程用 Mermaid 图表表示
+5. 直接输出最终 Markdown
+""",
     },
 }
 
@@ -336,6 +423,9 @@ def scrape_wechat_article(url: str) -> Dict[str, Any]:
     description = extract_regex_text(html, r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']')
     if not description:
         description = summarize_text(content_text, 160)
+    
+    # 提取所有图片
+    images = extract_images_from_html(content_html or html)
 
     return {
         'title': clean_text(title),
@@ -346,12 +436,26 @@ def scrape_wechat_article(url: str) -> Dict[str, Any]:
         'content': content_html or content_text,
         'content_text': content_text,
         'source_url': url,
+        'images': images,  # 添加图片列表
     }
 
 
 def html_to_markdown(html: str) -> str:
     """Convert basic HTML blocks to Markdown."""
     markdown = html or ''
+    
+    # 首先提取所有图片并添加说明
+    images = extract_images_from_html(html)
+    if images:
+        # 在文章开头添加图片说明章节
+        img_section = "## 文章图片说明\n\n"
+        img_section += "> 原文包含以下图片，改写时请保留这些图片或在相应位置使用 Mermaid 图表/文字描述替代\n\n"
+        for i, img in enumerate(images, 1):
+            img_section += f"![图片{i}: {img['alt'] or '无说明'}]({img['src']})\n"
+            img_section += f"> 位置：{img['src'][:80]}...\n\n"
+        img_section += "---\n\n"
+        markdown = img_section + markdown
+    
     replacements = [
         (r'<h1[^>]*>([\s\S]*?)</h1>', r'# \1\n\n'),
         (r'<h2[^>]*>([\s\S]*?)</h2>', r'## \1\n\n'),
@@ -365,7 +469,10 @@ def html_to_markdown(html: str) -> str:
         (r'<code[^>]*>([\s\S]*?)</code>', r'`\1`'),
         (r'<blockquote[^>]*>([\s\S]*?)</blockquote>', r'> \1\n\n'),
         (r'<br\s*/?>', r'\n'),
-        (r'<img[^>]+src="([^"]+)"[^>]*>', r'![](\1)\n'),
+        # 改进图片处理，保留 alt 文本
+        (r'<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>', r'![\2](\1)\n'),
+        (r'<img[^>]+alt="([^"]*)"[^>]+src="([^"]+)"[^>]*>', r'![\1](\2)\n'),
+        (r'<img[^>]+src="([^"]+)"[^>]*>', r'![](图片地址：\1)\n'),
         (r'<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)</a>', r'[\2](\1)'),
     ]
     for pattern, replacement in replacements:
@@ -606,6 +713,16 @@ def build_source_markdown(scraped: Dict[str, Any]) -> str:
         sections.append(f"# {title}")
     if meta_parts:
         sections.append(' | '.join(meta_parts))
+    
+    # 添加图片信息
+    images = scraped.get('images', [])
+    if images:
+        img_section = "\n## 原文图片\n\n"
+        for i, img in enumerate(images, 1):
+            img_section += f"**图片{i}**: {img['alt'] or '无说明'}\n"
+            img_section += f"![{img['alt'] or '图片'}]({img['src']})\n\n"
+        sections.append(img_section)
+    
     if body:
         sections.append(body)
     return '\n\n'.join(section for section in sections if section).strip()

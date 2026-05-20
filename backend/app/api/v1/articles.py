@@ -13,6 +13,7 @@ from app.extensions import db, limiter
 from app.models.article import Article
 from app.models.category import Category
 from app.models.tag import Tag
+from app.models.like import ArticleLike
 from app.services.ai_rewrite import slugify, process_rewrite_task
 from app.services.ai_tasks import create_task, get_task, list_tasks, clear_finished_tasks
 from app.services.wechat_album_scraper import WechatAlbumScraper
@@ -670,4 +671,115 @@ def increment_view_count(slug):
     return jsonify({
         'success': True,
         'view_count': article.view_count
+    }), 200
+
+
+@bp.route('/<int:id>/like', methods=['POST'])
+@limiter.limit("10 per minute", key_func=lambda: request.remote_addr)
+@jwt_required(optional=True)
+def like_article(id):
+    """
+    Like an article
+    
+    Supports both authenticated and anonymous users.
+    For authenticated users: uses user_id
+    For anonymous users: uses session_id + IP address
+    
+    Returns:
+        - 200: Success
+        - 404: Article not found
+        - 409: Already liked
+        - 429: Rate limit exceeded
+    """
+    # Find article
+    article = Article.query.get(id)
+    if not article:
+        return jsonify({'error': 'Article not found'}), 404
+    
+    # Get user info
+    try:
+        user_id = get_jwt_identity()
+    except:
+        user_id = None
+    
+    session_id = request.headers.get('X-Session-ID', request.remote_addr)
+    ip_address = request.remote_addr
+    
+    # Check if already liked
+    if user_id:
+        existing = ArticleLike.query.filter_by(article_id=id, user_id=user_id).first()
+    else:
+        existing = ArticleLike.query.filter_by(article_id=id, session_id=session_id).first()
+    
+    if existing:
+        return jsonify({
+            'error': 'Already liked',
+            'message': '您已点赞过这篇文章'
+        }), 409
+    
+    # Create like record
+    like = ArticleLike(
+        article_id=id,
+        user_id=user_id,
+        session_id=session_id if not user_id else None,
+        ip_address=ip_address
+    )
+    db.session.add(like)
+    db.session.commit()
+    
+    # Get updated like count
+    like_count = article.likes.count()
+    
+    return jsonify({
+        'success': True,
+        'like_count': like_count,
+        'liked': True
+    }), 200
+
+
+@bp.route('/<int:id>/unlike', methods=['DELETE'])
+@jwt_required(optional=True)
+def unlike_article(id):
+    """
+    Unlike an article
+    
+    Returns:
+        - 200: Success
+        - 404: Article not found or like not found
+    """
+    # Find article
+    article = Article.query.get(id)
+    if not article:
+        return jsonify({'error': 'Article not found'}), 404
+    
+    # Get user info
+    try:
+        user_id = get_jwt_identity()
+    except:
+        user_id = None
+    
+    session_id = request.headers.get('X-Session-ID', request.remote_addr)
+    
+    # Find and delete like record
+    if user_id:
+        like = ArticleLike.query.filter_by(article_id=id, user_id=user_id).first()
+    else:
+        like = ArticleLike.query.filter_by(article_id=id, session_id=session_id).first()
+    
+    if not like:
+        return jsonify({
+            'error': 'Like not found',
+            'message': '您未点赞过这篇文章'
+        }), 404
+    
+    db.session.delete(like)
+    db.session.commit()
+    
+    # Get updated like count
+    like_count = article.likes.count()
+    
+    return jsonify({
+        'success': True,
+        'like_count': like_count,
+        'liked': False
     }), 200

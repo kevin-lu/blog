@@ -10,6 +10,7 @@ from .site_setting import SiteSetting
 from .operation_log import OperationLog
 from .donation import DonationSetting
 from .crawler import CrawledURL, CrawledTitle, CrawlerTask, AIQueue, ScheduledJobLog
+from .like import ArticleLike
 
 __all__ = [
     'Admin',
@@ -27,4 +28,5 @@ __all__ = [
     'CrawlerTask',
     'AIQueue',
     'ScheduledJobLog',
+    'ArticleLike',
 ]

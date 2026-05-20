@@ -1,0 +1,12 @@
+version: 1
+active_change: add-article-like
+phase: propose
+checkpoint: plan-generated
+project_profile:
+  languages: [python, javascript, typescript]
+  frameworks: [flask, vue3]
+  build_tool: npm
+  compile_command: null
+  test_command: npm test
+  structure: single-module
+  has_ci: false

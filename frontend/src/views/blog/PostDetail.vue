@@ -33,6 +33,13 @@
             <n-icon :component="EyeOutline" size="14" />
             {{ article.view_count }} 次阅读
           </n-text>
+          <ArticleLike
+            v-if="article && article.id"
+            :article-id="article.id"
+            :initial-like-count="article.like_count || 0"
+            :initial-liked="false"
+            @update="handleLikeUpdate"
+          />
         </div>
 
         <div class="post-body" v-html="renderedContent"></div>
@@ -53,6 +60,7 @@ import { articleApi, articleViewApi } from '@/api'
 import { renderArticleContent } from '@/utils/markdown'
 import { formatDate, getArticleDate } from '@/utils/date'
 import CommentSection from './components/CommentSection.vue'
+import ArticleLike from '@/components/article/ArticleLike.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -85,6 +93,12 @@ const loadArticle = async () => {
     article.value = null
   } finally {
     loading.value = false
+  }
+}
+
+const handleLikeUpdate = (liked: boolean, likeCount: number) => {
+  if (article.value) {
+    article.value.like_count = likeCount
   }
 }
 

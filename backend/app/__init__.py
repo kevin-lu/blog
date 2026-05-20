@@ -6,7 +6,7 @@ from flask import Flask, send_from_directory
 from sqlalchemy import inspect, text
 from dotenv import load_dotenv
 
-from .extensions import db, jwt, cors, cache, limiter, api
+from .extensions import db, jwt, cors, cache, limiter
 
 
 def create_app(config_name=None):
@@ -34,7 +34,6 @@ def create_app(config_name=None):
     cors.init_app(app, supports_credentials=True)
     cache.init_app(app)
     limiter.init_app(app)
-    api.init_app(app)
     
     # Register blueprints
     from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat, crawler, queue, scheduler

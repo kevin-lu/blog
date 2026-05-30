@@ -46,9 +46,35 @@ class AICodeReviewer:
         ]
     
     def read_diff(self) -> str:
-        """读取 PR diff 内容"""
+        """读取 PR diff 内容，智能截断避免 token 超限"""
         with open(self.diff_file, 'r', encoding='utf-8') as f:
-            return f.read()
+            content = f.read()
+        
+        # Kimi moonshot-v1-8k 限制 8192 tokens，我们限制在 6000 字符以内
+        # 保留上下文完整性：按文件边界截断
+        if len(content) <= 6000:
+            return content
+        
+        # 按文件分割 diff
+        files = content.split('diff --git')
+        result = []
+        current_length = 0
+        max_length = 6000
+        
+        for file_diff in files:
+            if not file_diff.strip():
+                continue
+            
+            file_length = len(file_diff)
+            if current_length + file_length <= max_length:
+                result.append(file_diff)
+                current_length += file_length
+            else:
+                # 添加截断提示
+                result.append(f"\n... 还有 {len(files) - len(result)} 个文件未显示 ...")
+                break
+        
+        return 'diff --git' + ''.join(result) if result else content[:max_length]
     
     def read_static_analysis(self) -> Dict[str, Any]:
         """读取静态分析结果"""
@@ -107,7 +133,7 @@ class AICodeReviewer:
 ## PR Diff
 
 ```diff
-{diff_content[:50000]}  # 限制 5 万字符，避免 token 超限
+{diff_content}
 ```
 
 ## 静态分析结果

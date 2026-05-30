@@ -98,12 +98,13 @@ jobs:
           npx tsc --noEmit || true
 
   # ============================================
-  # 阶段 3: AI 深度代码审查（核心）
+  # 阶段 3: AI 深度审查
   # ============================================
   ai-deep-review:
     name: AI Deep Review
     runs-on: ubuntu-latest
-    needs: [static-analysis]
+    needs: [frontend-analysis]
+    if: always()
     
     outputs:
       review_summary: ${{ steps.ai_review.outputs.summary }}

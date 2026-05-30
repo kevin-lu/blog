@@ -27,5 +27,6 @@ logs
 worktrees
 
 .trae
-docs
+docs/*
+!docs/code-review/
 openspec

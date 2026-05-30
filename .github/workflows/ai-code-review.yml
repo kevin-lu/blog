@@ -198,6 +198,15 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests
+      
       - name: Download AI review result
         uses: actions/download-artifact@v4
         with:

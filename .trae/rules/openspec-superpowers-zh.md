@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # OpenSpec + Superpowers + GStack 三工具集成规则
 

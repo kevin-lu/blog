@@ -1,6 +1,6 @@
 ---
 
-## 特殊规则：hyperspec-grill
+## 特殊规则：hyperspec-grill + grill-me-with-docs
 
 **什么是 hyperspec-grill？**
 
@@ -18,11 +18,17 @@ grill 阶段 → propose 阶段 → apply 阶段 → archive 阶段
 - 用户提到"添加 XXX 功能"、"创建 XXX"、"实现 XXX"（新功能开发）
 
 **grill 阶段做什么**：
-1. 对抗性需求访谈，挑战产品方向
-2. 验证是否在构建正确的东西
+1. 调用 `grill-me-with-docs` skill 进行对抗性需求访谈
+2. 挑战产品方向，验证是否在构建正确的东西
 3. 生成 CONTEXT.md（领域术语表）
 4. 生成 ADRs（架构决策记录）
 5. 确保需求清晰、技术决策合理
+
+**grill-me-with-docs 的作用**：
+- 专门负责对抗性需求访谈和基于文档的审查
+- 在规格生成前深度 grilling，避免后期返工
+- 逐个分支审查设计决策树，每个问题提供推荐答案
+- 先在代码库中搜索现有文档再提问
 
 **为什么使用 hyperspec-grill 而不是 openspec-propose？**
 - `openspec-propose`：直接创建规格，适合需求明确的场景
@@ -32,7 +38,7 @@ grill 阶段 → propose 阶段 → apply 阶段 → archive 阶段
 ```
 用户：添加一个实时协作编辑功能
 AI: [自动调用 hyperspec-grill]
-    [grill 阶段：询问并发冲突、离线处理、权限控制等]
+    [grill 阶段：调用 grill-me-with-docs，询问并发冲突、离线处理、权限控制等]
     [propose 阶段：基于 grill 结果创建完整规格]
     [apply 阶段：实现功能]
     [archive 阶段：归档完成]

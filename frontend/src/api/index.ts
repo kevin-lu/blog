@@ -8,6 +8,7 @@ import type {
   DashboardStats,
   UploadResponse,
 } from '@/types'
+import type { ArticleStats, ArticleVisit, VisitsListResponse, StatsQueryParams, VisitsQueryParams } from '@/types/article_stats'
 
 interface ArticlesResponse {
   success: boolean
@@ -404,6 +405,29 @@ export const articleViewApi = {
   async increment(slug: string): Promise<number> {
     const result = await apiClient.post<{ view_count: number }>(`articles/${slug}/view`, {})
     return result.view_count
+  },
+}
+
+// 文章统计 API
+export const articleStatsApi = {
+  async getStats(slug: string, params?: StatsQueryParams) {
+    const response = await apiClient.get<ArticleStats>(`articles/${slug}/stats`, { params })
+    return response
+  },
+
+  async getVisits(slug: string, params?: VisitsQueryParams) {
+    const response = await apiClient.get<VisitsListResponse>(`articles/${slug}/visits`, { params })
+    return response
+  },
+
+  async getAdminStats(articleId: number, params?: StatsQueryParams) {
+    const response = await apiClient.get<ArticleStats>(`articles/admin/${articleId}/stats`, { params })
+    return response
+  },
+
+  async getAdminVisits(articleId: number, params?: VisitsQueryParams) {
+    const response = await apiClient.get<VisitsListResponse>(`articles/admin/${articleId}/visits`, { params })
+    return response
   },
 }
 

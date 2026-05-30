@@ -36,7 +36,7 @@ def create_app(config_name=None):
     limiter.init_app(app)
     
     # Register blueprints
-    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat, crawler, queue, scheduler
+    from .api.v1 import auth, articles, categories, tags, comments, settings, upload, donations, ai_chat, crawler, queue, scheduler, article_stats
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(articles.bp, url_prefix='/api/v1/articles')
@@ -50,6 +50,7 @@ def create_app(config_name=None):
     app.register_blueprint(crawler.bp, url_prefix='/api/v1/crawler')
     app.register_blueprint(queue.bp, url_prefix='/api/v1/queue')
     app.register_blueprint(scheduler.bp, url_prefix='/api/v1/scheduler')
+    app.register_blueprint(article_stats.bp, url_prefix='/api/v1/articles')
     
     # Register route to serve uploaded files
     @app.route('/uploads/<path:filename>')

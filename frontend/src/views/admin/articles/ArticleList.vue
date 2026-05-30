@@ -261,13 +261,22 @@ const columns: DataTableColumns = [
     },
   },
   {
-    title: '浏览次数',
-    key: 'view_count',
-    width: 100,
-    sorter: 'default',
+    title: 'UV',
+    key: 'uv',
+    width: 80,
     render(row) {
       return h('span', { style: 'font-size: 13px; color: #666;' }, [
-        row.view_count || 0,
+        row.uv || 0,
+      ])
+    },
+  },
+  {
+    title: 'PV',
+    key: 'pv',
+    width: 80,
+    render(row) {
+      return h('span', { style: 'font-size: 13px; color: #666;' }, [
+        row.pv || 0,
       ])
     },
   },
@@ -284,16 +293,16 @@ const columns: DataTableColumns = [
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 250,
     fixed: 'right',
     render(row) {
       return h('div', { style: 'display: flex; gap: 8px;' }, [
         h(NButton, {
           size: 'small',
           type: 'tertiary',
-          onClick: () => goToView(row.slug),
+          onClick: () => goToStats(row.id),
         }, {
-          default: () => '查看',
+          default: () => '统计',
           icon: () => h(NIcon, { component: EyeOutline }),
         }),
         h(NButton, {
@@ -327,6 +336,10 @@ const goToView = (slug: string) => {
 
 const goToEdit = (slug: string) => {
   router.push(`/admin/articles/edit/${slug}`)
+}
+
+const goToStats = (id: number) => {
+  router.push(`/admin/articles/${id}/stats`)
 }
 
 const handleSearch = () => {

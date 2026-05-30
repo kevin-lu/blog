@@ -24,6 +24,8 @@ export interface Article {
   categories?: Category[]
   tags?: Tag[]
   view_count?: number  // 浏览次数
+  uv?: number  // 独立访客数
+  pv?: number  // 页面浏览量
   like_count?: number  // 点赞数
   comment_count?: number
 }

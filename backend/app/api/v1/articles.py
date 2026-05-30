@@ -68,7 +68,7 @@ def build_article_slug(raw_slug, title, existing_article=None):
 
 
 @bp.route('', methods=['GET'])
-@limiter.limit("30 per minute")
+@limiter.limit("200 per minute")
 def get_articles():
     """
     Get articles list with pagination and filters
@@ -621,7 +621,7 @@ def increment_view_count(slug):
     
     防刷策略：
     - 同一 IP 在 24 小时内只计一次
-    - 使用内存缓存记录 IP 访问时间
+    - 使用数据库持久化记录访问日志
     
     Returns:
         {
@@ -630,6 +630,7 @@ def increment_view_count(slug):
         }
     """
     from datetime import datetime, timedelta
+    from app.models.article_visit import ArticleVisit
     
     article = Article.query.filter_by(slug=slug).first()
     if not article:
@@ -642,31 +643,37 @@ def increment_view_count(slug):
         return request.remote_addr or '127.0.0.1'
     
     client_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', '')
     
-    # 缓存 key
-    cache_key = f'article_view:{slug}:{client_ip}'
+    # 检查 24 小时内是否已访问（使用数据库持久化）
+    twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+    existing_visit = ArticleVisit.query.filter(
+        ArticleVisit.article_id == article.id,
+        ArticleVisit.ip_address == client_ip,
+        ArticleVisit.visited_at >= twenty_four_hours_ago
+    ).first()
     
-    # 检查是否在 24 小时内已访问（简单内存缓存实现）
-    if not hasattr(current_app, 'view_cache'):
-        current_app.view_cache = {}
-    
-    last_view = current_app.view_cache.get(cache_key)
-    if last_view:
-        # 检查是否在 24 小时内
-        if datetime.now() - last_view < timedelta(hours=24):
-            # 已访问过，不增加计数，但返回当前浏览次数
-            return jsonify({
-                'success': True,
-                'view_count': article.view_count or 0,
-                'cached': True
-            })
+    if existing_visit:
+        # 已访问过，不增加计数，但返回当前浏览次数
+        return jsonify({
+            'success': True,
+            'view_count': article.view_count or 0,
+            'cached': True
+        })
     
     # 增加浏览次数
     article.view_count = (article.view_count or 0) + 1
-    db.session.commit()
     
-    # 更新缓存
-    current_app.view_cache[cache_key] = datetime.now()
+    # 创建访问记录
+    visit = ArticleVisit(
+        article_id=article.id,
+        article_slug=slug,
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    db.session.add(visit)
+    
+    db.session.commit()
     
     return jsonify({
         'success': True,

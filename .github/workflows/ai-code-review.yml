@@ -218,9 +218,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
         run: |
+          # 查找实际的 JSON 文件位置
+          REVIEW_FILE=$(find /tmp/ai-review-result -name "*.json" | head -1)
+          if [ -z "$REVIEW_FILE" ]; then
+            REVIEW_FILE="/tmp/ai-review-result.json"
+          fi
+          echo "Using review file: $REVIEW_FILE"
+          
           python .github/scripts/post_review_comments.py \
             --pr-number $PR_NUMBER \
-            --review-file /tmp/ai-review-result.json \
+            --review-file "$REVIEW_FILE" \
             --create-inline-comments
 
   # ============================================

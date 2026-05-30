@@ -2,6 +2,7 @@
 """
 AI 深度代码审查脚本
 集成 gstack-review skill，执行生产级代码审查
+支持 GitHub 和 Gitee 平台
 """
 
 import os
@@ -17,10 +18,11 @@ from datetime import datetime
 class AICodeReviewer:
     """AI 代码审查器"""
     
-    def __init__(self, pr_number: int, diff_file: str, static_analysis_dir: str):
+    def __init__(self, pr_number: int, diff_file: str, static_analysis_dir: str, platform: str = "github"):
         self.pr_number = pr_number
         self.diff_file = diff_file
         self.static_analysis_dir = static_analysis_dir
+        self.platform = platform
         self.llm_api_key = os.getenv("LLM_API_KEY")
         self.llm_api_url = os.getenv("LLM_API_URL", "https://api.moonshot.cn/v1/chat/completions")
         self.llm_model = os.getenv("LLM_MODEL", "moonshot-v1-8k")
@@ -244,6 +246,7 @@ def main():
     parser.add_argument("--diff-file", required=True)
     parser.add_argument("--static-analysis-dir", required=True)
     parser.add_argument("--output-file", default="/tmp/ai-review-result.json")
+    parser.add_argument("--platform", default="github", choices=["github", "gitee"])
     
     args = parser.parse_args()
     
@@ -251,7 +254,8 @@ def main():
     reviewer = AICodeReviewer(
         pr_number=args.pr_number,
         diff_file=args.diff_file,
-        static_analysis_dir=args.static_analysis_dir
+        static_analysis_dir=args.static_analysis_dir,
+        platform=args.platform
     )
     
     # 执行审查

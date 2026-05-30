@@ -193,43 +193,89 @@ Mypy 问题：{len(static_results['mypy'])} 个
             "max_tokens": 4000
         }
         
-        response = requests.post(
-            self.llm_api_url,
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
+        # 重试逻辑（处理 Kimi API 超载）
+        max_retries = 3
+        retry_delay = 5  # 秒
         
-        if response.status_code == 200:
-            result = response.json()
-            content = result["choices"][0]["message"]["content"]
-            
-            # 解析 JSON 结果
+        for attempt in range(max_retries):
             try:
-                # 提取 JSON 部分
-                start_idx = content.find("```json")
-                if start_idx >= 0:
-                    start_idx += 7
-                    end_idx = content.find("```", start_idx)
-                    content = content[start_idx:end_idx].strip()
+                response = requests.post(
+                    self.llm_api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
                 
-                review_result = json.loads(content)
-                return review_result
-            except json.JSONDecodeError:
-                return {
-                    "summary": "AI 审查完成",
-                    "verdict": "Needs Work",
-                    "critical_issues": [],
-                    "raw_analysis": content
-                }
-        else:
-            print(f"AI 审查失败：{response.text}")
-            return {
-                "summary": "AI 审查失败",
-                "verdict": "Needs Work",
-                "critical_issues": [],
-                "error": response.text
-            }
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result["choices"][0]["message"]["content"]
+                    
+                    # 解析 JSON 结果
+                    try:
+                        # 提取 JSON 部分
+                        start_idx = content.find("```json")
+                        if start_idx >= 0:
+                            start_idx += 7
+                            end_idx = content.find("```", start_idx)
+                            content = content[start_idx:end_idx].strip()
+                        
+                        review_result = json.loads(content)
+                        print(f"AI 审查成功（尝试 {attempt + 1}/{max_retries}）")
+                        return review_result
+                    except json.JSONDecodeError:
+                        return {
+                            "summary": "AI 审查完成",
+                            "verdict": "Needs Work",
+                            "critical_issues": [],
+                            "raw_analysis": content
+                        }
+                else:
+                    error_msg = response.text
+                    print(f"AI 审查失败（尝试 {attempt + 1}/{max_retries}）: {error_msg}")
+                    
+                    # 检查是否是超载错误
+                    if "overloaded" in error_msg.lower() or "engine_overloaded" in error_msg.lower():
+                        if attempt < max_retries - 1:
+                            print(f"Kimi API 超载，等待 {retry_delay} 秒后重试...")
+                            import time
+                            time.sleep(retry_delay)
+                            retry_delay *= 2  # 指数退避
+                            continue
+                        else:
+                            return {
+                                "summary": "Kimi API 暂时超载，请稍后重试",
+                                "verdict": "Needs Work",
+                                "critical_issues": [],
+                                "error": error_msg
+                            }
+                    else:
+                        return {
+                            "summary": "AI 审查失败",
+                            "verdict": "Needs Work",
+                            "critical_issues": [],
+                            "error": error_msg
+                        }
+            except requests.exceptions.RequestException as e:
+                print(f"网络错误（尝试 {attempt + 1}/{max_retries}）: {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    return {
+                        "summary": "网络连接失败",
+                        "verdict": "Needs Work",
+                        "critical_issues": [],
+                        "error": str(e)
+                    }
+        
+        # 不应该到这里
+        return {
+            "summary": "AI 审查失败",
+            "verdict": "Needs Work",
+            "critical_issues": []
+        }
     
     def run(self) -> Dict[str, Any]:
         """执行完整的审查流程"""

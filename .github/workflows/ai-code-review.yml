@@ -1,0 +1,259 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR 编号'
+        required: true
+
+jobs:
+  # ============================================
+  # 阶段 1: 传统静态检查（快速失败）
+  # ============================================
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install flake8 black mypy pylint
+      
+      - name: Lint with flake8
+        continue-on-error: true
+        run: |
+          cd backend
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ --count --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Check formatting with black
+        continue-on-error: true
+        run: |
+          cd backend
+          black --check app/ || true
+      
+      - name: Type check with mypy
+        continue-on-error: true
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports || true
+      
+      - name: Upload analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: static-analysis-results
+          path: |
+            backend/*.txt
+            backend/*.log
+
+  # ============================================
+  # 阶段 2: 前端检查
+  # ============================================
+  frontend-analysis:
+    name: Frontend Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Lint
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run lint || true
+      
+      - name: Build
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run build || true
+      
+      - name: Type check
+        continue-on-error: true
+        run: |
+          cd frontend
+          npx tsc --noEmit || true
+
+  # ============================================
+  # 阶段 3: AI 深度代码审查（核心）
+  # ============================================
+  ai-deep-review:
+    name: AI Deep Review
+    runs-on: ubuntu-latest
+    needs: [static-analysis]
+    
+    outputs:
+      review_summary: ${{ steps.ai_review.outputs.summary }}
+      critical_issues: ${{ steps.ai_review.outputs.critical_issues }}
+      has_critical: ${{ steps.ai_review.outputs.has_critical }}
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install elasticsearch pyyaml requests
+      
+      - name: Get PR diff
+        id: get_diff
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+        run: |
+          # 获取 PR 的完整 diff
+          gh pr diff $PR_NUMBER > /tmp/pr-diff.txt
+          echo "diff_lines=$(wc -l < /tmp/pr-diff.txt)" >> $GITHUB_OUTPUT
+          echo "diff_files=$(git diff --name-only origin/${{ github.base_ref }}..${{ github.sha }} | wc -l)" >> $GITHUB_OUTPUT
+      
+      - name: Download static analysis results
+        uses: actions/download-artifact@v3
+        with:
+          name: static-analysis-results
+          path: /tmp/static-analysis
+      
+      - name: AI 深度代码审查
+        id: ai_review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python .github/scripts/ai_code_review.py \
+            --pr-number $PR_NUMBER \
+            --diff-file /tmp/pr-diff.txt \
+            --static-analysis-dir /tmp/static-analysis \
+            --output-file /tmp/ai-review-result.json
+      
+      - name: Upload AI review result
+        uses: actions/upload-artifact@v3
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result.json
+      
+      - name: Generate review summary
+        run: |
+          if [ -f /tmp/ai-review-result.json ]; then
+            echo "## 🤖 AI 代码审查结果" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/ai-review-result.json | jq -r '.summary' >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================
+  # 阶段 4: 自动评论到 PR
+  # ============================================
+  post-review-comments:
+    name: Post Review Comments
+    runs-on: ubuntu-latest
+    needs: [ai-deep-review]
+    if: always()
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Download AI review result
+        uses: actions/download-artifact@v3
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result
+      
+      - name: Post comprehensive review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+        run: |
+          python .github/scripts/post_review_comments.py \
+            --pr-number $PR_NUMBER \
+            --review-file /tmp/ai-review-result/review.json \
+            --create-inline-comments
+
+  # ============================================
+  # 阶段 5: 自动修复（仅当有 Critical 问题时）
+  # ============================================
+  auto-fix-critical:
+    name: Auto-Fix Critical Issues
+    runs-on: ubuntu-latest
+    needs: [ai-deep-review]
+    if: needs.ai-deep-review.outputs.has_critical == 'true'
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Download AI review result
+        uses: actions/download-artifact@v3
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result
+      
+      - name: AI 自动修复 Critical 问题
+        id: auto_fix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+        run: |
+          python .github/scripts/ai_auto_fix.py \
+            --pr-number $PR_NUMBER \
+            --review-file /tmp/ai-review-result/review.json \
+            --create-fix-branch
+      
+      - name: Create Fix PR
+        if: steps.auto_fix.outputs.fix_branch != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_BRANCH: ${{ steps.auto_fix.outputs.fix_branch }}
+          ORIGINAL_PR: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+        run: |
+          python .github/scripts/create_fix_pr.py \
+            --branch $FIX_BRANCH \
+            --original-pr $ORIGINAL_PR

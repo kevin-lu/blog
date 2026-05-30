@@ -113,7 +113,6 @@ index 1234567..89abcdef 100644
 DIFF
           
           # 运行 AI 审查
-          cd backend
           pip install requests pyyaml
           
           python .github/scripts/ai_code_review.py \

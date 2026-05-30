@@ -10,6 +10,11 @@ on:
         description: 'PR 编号'
         required: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   # ============================================
   # 阶段 1: 传统静态检查（快速失败）

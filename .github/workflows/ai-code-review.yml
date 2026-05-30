@@ -52,7 +52,7 @@ jobs:
           mypy app/ --ignore-missing-imports || true
       
       - name: Upload analysis results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: static-analysis-results
           path: |
@@ -162,7 +162,7 @@ jobs:
             --output-file /tmp/ai-review-result.json
       
       - name: Upload AI review result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ai-review-result
           path: /tmp/ai-review-result.json

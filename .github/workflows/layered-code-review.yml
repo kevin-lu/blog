@@ -55,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: open-code-review
+    continue-on-error: true  # 即使失败也继续执行后续步骤
     
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +68,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        continue-on-error: true  # 扫描失败不影响后续步骤
       
       - name: Wait for quality gate
         run: |

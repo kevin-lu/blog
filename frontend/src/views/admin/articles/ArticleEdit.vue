@@ -6,10 +6,7 @@
         <p>{{ isEdit ? '修改文章内容' : '创建一篇新文章' }}</p>
       </div>
       <div class="header-right">
-        <n-button type="warning" @click="showAIRewriteModal = true" :disabled="isEdit">
-          <template #icon>
-            <n-icon :component="SparklesOutline" />
-          </template>
+        <n-button tertiary @click="goToAIGenerator">
           AI 改写
         </n-button>
         <n-button @click="handleSaveDraft" :loading="saving">
@@ -20,42 +17,6 @@
         </n-button>
       </div>
     </div>
-
-    <!-- AI Rewrite Modal -->
-    <n-modal v-model:show="showAIRewriteModal" preset="card" title="🤖 AI 智能改写" style="width: 500px;">
-      <n-space vertical>
-        <n-alert type="info">
-          输入微信公众号文章链接，AI 将自动抓取并改写内容
-        </n-alert>
-        
-        <n-input
-          v-model:value="aiSourceUrl"
-          placeholder="请输入微信公众号文章链接"
-        />
-        
-        <n-space>
-          <n-select
-            v-model:value="aiRewriteStrategy"
-            :options="rewriteStrategyOptions"
-            style="width: 150px"
-          />
-          <n-select
-            v-model:value="aiTemplateType"
-            :options="templateTypeOptions"
-            style="width: 150px"
-          />
-        </n-space>
-        
-        <n-button
-          type="primary"
-          block
-          :loading="aiLoading"
-          @click="handleAIRewrite"
-        >
-          开始 AI 改写
-        </n-button>
-      </n-space>
-    </n-modal>
 
     <n-space vertical size="large">
       <!-- Title -->
@@ -206,9 +167,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import {
   CloudUploadOutline,
-  SparklesOutline,
 } from '@vicons/ionicons5'
-import { adminArticleApi, adminCategoryApi, adminTagApi, uploadApi } from '@/api'
+import { adminArticleApi, adminCategoryApi, adminTagApi } from '@/api'
 import type { Article } from '@/types'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
 import { renderArticleContent } from '@/utils/markdown'
@@ -220,26 +180,6 @@ const message = useMessage()
 const isEdit = computed(() => !!route.params.slug)
 const saving = ref(false)
 const showImageModal = ref(false)
-
-// AI 改写相关
-const showAIRewriteModal = ref(false)
-const aiSourceUrl = ref('')
-const aiRewriteStrategy = ref('standard')
-const aiTemplateType = ref('tutorial')
-const aiLoading = ref(false)
-
-const rewriteStrategyOptions = [
-  { label: '标准改写', value: 'standard' },
-  { label: '深度改写', value: 'deep' },
-  { label: '创意改写', value: 'creative' },
-]
-
-const templateTypeOptions = [
-  { label: '教程类', value: 'tutorial' },
-  { label: '概念类', value: 'concept' },
-  { label: '对比类', value: 'comparison' },
-  { label: '实战类', value: 'practice' },
-]
 
 const formData = reactive<Partial<Article>>({
   title: '',
@@ -268,6 +208,10 @@ const uploadHeaders = computed(() => ({
 
 const handleUploadImage = () => {
   showImageModal.value = true
+}
+
+const goToAIGenerator = () => {
+  router.push('/admin/ai-generator')
 }
 
 const handleImageUploadFinish = ({ event }: any) => {
@@ -339,45 +283,6 @@ const handlePublish = async () => {
     message.error('发布失败')
   } finally {
     saving.value = false
-  }
-}
-
-const handleAIRewrite = async () => {
-  if (!aiSourceUrl.value) {
-    message.warning('请输入文章链接')
-    return
-  }
-  
-  aiLoading.value = true
-  try {
-    const token = localStorage.getItem('access_token')
-    const response = await fetch('/api/admin/articles/ai-rewrite', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        sourceUrl: aiSourceUrl.value,
-        rewriteStrategy: aiRewriteStrategy.value,
-        templateType: aiTemplateType.value,
-        autoPublish: false,
-      }),
-    })
-    
-    const result = await response.json()
-    
-    if (result.success) {
-      message.success('AI 改写任务已创建，请在 AI 改写页面查看进度')
-      showAIRewriteModal.value = false
-      router.push('/admin/ai-generator')
-    } else {
-      message.error(result.message || 'AI 改写失败')
-    }
-  } catch (error) {
-    message.error('AI 改写请求失败')
-  } finally {
-    aiLoading.value = false
   }
 }
 

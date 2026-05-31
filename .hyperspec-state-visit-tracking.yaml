@@ -1,0 +1,14 @@
+version: 1
+active_change: add-article-visit-tracking
+phase: propose
+checkpoint: openspec-generated
+project_profile:
+  languages: [python, javascript, typescript]
+  frameworks: [flask, vue3]
+  build_tool: npm
+  compile_command: null
+  test_command: npm test
+  structure: single-module
+  has_ci: false
+grill_summary: docs/adr/0000-grill-summary-visit-tracking.md
+adr: docs/adr/0003-article-visit-tracking.md

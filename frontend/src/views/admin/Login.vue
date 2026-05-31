@@ -59,7 +59,7 @@
 
       <div class="login-footer">
         <n-text depth="3" style="font-size: 12px">
-          © 2024 博客系统。All rights reserved.
+          © 2026 博客系统。All rights reserved.
         </n-text>
       </div>
     </div>

@@ -1,5 +1,51 @@
 ---
-alwaysApply: true
+
+## 特殊规则：hyperspec-grill + grill-me-with-docs
+
+**什么是 hyperspec-grill？**
+
+`hyperspec-grill` 是规格驱动开发的完整工作流，整合了对抗性需求审查（grill）和 HyperSpec 三阶段（propose, apply, archive）。
+
+**工作流程**：
+```
+grill 阶段 → propose 阶段 → apply 阶段 → archive 阶段
+    ↓            ↓            ↓           ↓
+需求审查    创建规格    实现功能    归档完成
+```
+
+**自动触发条件**：
+- 用户说"用 hyperspec-grill"、"规格驱动开发"、"完整流程开发功能"
+- 用户提到"添加 XXX 功能"、"创建 XXX"、"实现 XXX"（新功能开发）
+
+**grill 阶段做什么**：
+1. 调用 `grill-me-with-docs` skill 进行对抗性需求访谈
+2. 挑战产品方向，验证是否在构建正确的东西
+3. 生成 CONTEXT.md（领域术语表）
+4. 生成 ADRs（架构决策记录）
+5. 确保需求清晰、技术决策合理
+
+**grill-me-with-docs 的作用**：
+- 专门负责对抗性需求访谈和基于文档的审查
+- 在规格生成前深度 grilling，避免后期返工
+- 逐个分支审查设计决策树，每个问题提供推荐答案
+- 先在代码库中搜索现有文档再提问
+
+**为什么使用 hyperspec-grill 而不是 openspec-propose？**
+- `openspec-propose`：直接创建规格，适合需求明确的场景
+- `hyperspec-grill`：先审查再创建规格，适合需要深入思考的复杂功能
+
+**示例**：
+```
+用户：添加一个实时协作编辑功能
+AI: [自动调用 hyperspec-grill]
+    [grill 阶段：调用 grill-me-with-docs，询问并发冲突、离线处理、权限控制等]
+    [propose 阶段：基于 grill 结果创建完整规格]
+    [apply 阶段：实现功能]
+    [archive 阶段：归档完成]
+```
+
+---
+alwaysApply: false
 ---
 # OpenSpec + Superpowers 自动触发规则
 
@@ -17,7 +63,7 @@ alwaysApply: true
 
 | 用户请求类型 | 关键词 | 触发技能 |
 |------------|--------|---------|
-| **新功能开发** | "添加"、"创建"、"实现"、"开发"、"做个" | `openspec-propose` |
+| **新功能开发** | "添加"、"创建"、"实现"、"开发"、"做个" | `hyperspec-grill` |
 | **需求不明确** | "我想"、"有没有"、"能不能"、"考虑" | `openspec-explore` |
 | **实现规格** | "实现"、"开始做"、"执行"（当 openspec/changes 有待实现规格） | `openspec-apply-change` |
 | **Bug 修复** | "bug"、"错误"、"失败"、"问题"、"fix" | `systematic-debugging` |
@@ -40,16 +86,24 @@ alwaysApply: true
 
 **自动动作**：
 ```
-1. 立即调用 `openspec-propose` skill
-2. 等待 skill 创建完整的 proposal/design/tasks
-3. 然后询问用户是否开始实现
+1. 立即调用 `hyperspec-grill` skill
+2. 执行 grill 阶段：对抗性需求审查，确保需求清晰
+3. 执行 propose 阶段：创建完整的 proposal/design/tasks
+4. 询问用户是否开始实现
 ```
 
 **示例**：
 ```
 用户：添加一个用户管理系统
-AI: [自动调用 openspec-propose]
+AI: [自动调用 hyperspec-grill]
+    [执行 grill → propose 完整流程]
 ```
+
+**优势**：
+- ✅ 通过对抗性审查避免需求不清晰
+- ✅ 生成 CONTEXT.md 和 ADRs 文档
+- ✅ 确保技术决策有据可依
+- ✅ 比直接使用 openspec-propose 更严谨
 
 ---
 

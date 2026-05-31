@@ -29,16 +29,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/blog/CategoryPosts.vue'),
       },
       {
-        path: '/tags',
-        name: 'tags',
-        component: () => import('@/views/blog/Tags.vue'),
-      },
-      {
-        path: '/tags/:name',
-        name: 'tag-posts',
-        component: () => import('@/views/blog/TagPosts.vue'),
-      },
-      {
         path: '/about',
         name: 'about',
         component: () => import('@/views/blog/About.vue'),
@@ -68,14 +58,19 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/articles/ArticleEdit.vue'),
       },
       {
+        path: 'ai-generator',
+        name: 'admin-ai-generator',
+        component: () => import('@/views/admin/articles/AIGenerator.vue'),
+      },
+      {
         path: 'articles/edit/:slug',
         name: 'admin-article-edit',
         component: () => import('@/views/admin/articles/ArticleEdit.vue'),
       },
       {
-        path: 'ai-generator',
-        name: 'admin-ai-generator',
-        component: () => import('@/views/admin/articles/AIGenerator.vue'),
+        path: 'articles/:id/stats',
+        name: 'admin-article-stats',
+        component: () => import('@/views/admin/articles/ArticleStats.vue'),
       },
       {
         path: 'categories',
@@ -96,6 +91,21 @@ const routes: RouteRecordRaw[] = [
         path: 'settings',
         name: 'admin-settings',
         component: () => import('@/views/admin/settings/SiteSettings.vue'),
+      },
+      {
+        path: 'donation',
+        name: 'admin-donation',
+        component: () => import('@/views/admin/donation/DonationSettings.vue'),
+      },
+      {
+        path: 'ai-chat',
+        name: 'admin-ai-chat',
+        component: () => import('@/views/admin/AIChat.vue'),
+      },
+      {
+        path: 'crawler',
+        name: 'admin-crawler',
+        component: () => import('@/views/admin/crawler/CrawlerManage.vue'),
       },
     ],
   },

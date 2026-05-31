@@ -1,0 +1,184 @@
+name: Layered Code Review
+
+on:
+  pull_request:
+    branches: [main, master, develop, dev_lzb_v4.0]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR 编号'
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ============================================
+  # 第一层：OpenCodeReview（快速规范检查）
+  # ============================================
+  open-code-review:
+    name: OpenCodeReview (Alibaba)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install flake8 black isort
+      
+      - name: Run OpenCodeReview
+        run: |
+          python .github/scripts/run_open_code_review.py
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-code-review-result
+          path: open-code-review-result.json
+          retention-days: 1
+
+  # ============================================
+  # 第二层：SonarQube（全面质量扫描）
+  # ============================================
+  sonarqube-scan:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: open-code-review
+    continue-on-error: true  # 即使失败也继续执行后续步骤
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史用于增量分析
+      
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        continue-on-error: true  # 扫描失败不影响后续步骤
+      
+      - name: Wait for quality gate
+        run: |
+          echo "Waiting for SonarQube quality gate..."
+          sleep 30
+      
+      - name: Get quality gate result
+        run: |
+          # 获取质量门禁结果
+          curl -u ${{ secrets.SONAR_TOKEN }}: \
+            "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=${{ secrets.SONAR_PROJECT_KEY }}" \
+            -o sonarqube-result.json 2>/dev/null || echo "{}" > sonarqube-result.json
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarqube-result
+          path: sonarqube-result.json
+          retention-days: 1
+
+  # ============================================
+  # 第三层：AI 深度审查（综合分析）
+  # ============================================
+  ai-deep-review:
+    name: AI Deep Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [open-code-review, sonarqube-scan]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests PyGithub
+      
+      - name: Download all review results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-result"
+          path: ./review-results
+      
+      - name: Get PR diff
+        run: |
+          # 使用 GitHub API 获取 PR diff
+          curl -L \
+            -H "Accept: application/vnd.github.v3.diff" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            > pr-diff.txt
+          
+          # 如果 API 失败，尝试使用 git diff
+          if [ ! -s pr-diff.txt ]; then
+            git fetch origin "${{ github.base_ref }}"
+            git diff "origin/${{ github.base_ref }}...HEAD" > pr-diff.txt || echo "" > pr-diff.txt
+          fi
+      
+      - name: Run AI comprehensive review
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python .github/scripts/ai_comprehensive_review.py
+      
+      - name: Upload AI review result
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-result
+          path: ai-review-result.json
+          retention-days: 1
+
+  # ============================================
+  # 汇总评论：发布统一报告
+  # ============================================
+  post-unified-comment:
+    name: Post Unified Comment
+    runs-on: ubuntu-latest
+    needs: [ai-deep-review]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install PyGithub
+      
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-result"
+          path: ./review-results
+      
+      - name: Post unified comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python .github/scripts/post_unified_comment.py

@@ -17,7 +17,7 @@
             placeholder="状态"
             clearable
             style="width: 120px"
-            @update:value="loadComments"
+            @update:value="handleFilterChange"
           />
         </n-space>
       </div>
@@ -30,23 +30,6 @@
         :row-key="rowKey"
       />
     </n-card>
-
-    <!-- Reply Modal -->
-    <n-modal
-      v-model:show="showReplyModal"
-      preset="dialog"
-      title="回复评论"
-      positive-text="发送"
-      negative-text="取消"
-      @positive-click="handleReply"
-    >
-      <n-input
-        v-model:value="replyContent"
-        type="textarea"
-        placeholder="请输入回复内容"
-        :rows="4"
-      />
-    </n-modal>
 
     <!-- Delete Dialog -->
     <n-modal
@@ -63,21 +46,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, h, onMounted } from 'vue'
-import { useMessage, useDialog, NButton, NTag, NIcon } from 'naive-ui'
+import { useMessage, NButton, NTag, NIcon } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { CheckmarkOutline, CloseOutline, ChatbubbleOutline, TrashOutline } from '@vicons/ionicons5'
+import { CheckmarkOutline, CloseOutline, TrashOutline } from '@vicons/ionicons5'
+import type { Comment } from '@/types'
 import { commentApi } from '@/api'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const loading = ref(false)
-const comments = ref<any[]>([])
-const showReplyModal = ref(false)
+const comments = ref<Comment[]>([])
 const showDeleteModal = ref(false)
-const deleteComment = ref<any>(null)
-const replyContent = ref('')
-const currentComment = ref<any>(null)
+const deleteComment = ref<Comment | null>(null)
 
 const filters = reactive({
   status: '',
@@ -89,7 +69,24 @@ const statusOptions = [
   { label: '已拒绝', value: 'rejected' },
 ]
 
-const rowKey = (row: any) => row.id
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  itemCount: 0,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50],
+  onChange: (page: number) => {
+    pagination.page = page
+    loadComments()
+  },
+  onUpdatePageSize: (pageSize: number) => {
+    pagination.pageSize = pageSize
+    pagination.page = 1
+    loadComments()
+  },
+})
+
+const rowKey = (row: Comment) => row.id
 
 const columns: DataTableColumns = [
   {
@@ -99,29 +96,24 @@ const columns: DataTableColumns = [
   },
   {
     title: '评论者',
-    key: 'author',
+    key: 'github_id',
     width: 150,
     render(row) {
       return h('div', [
-        h('div', { style: 'font-weight: 500;' }, row.author_name || '匿名'),
-        h('div', { style: 'font-size: 12px; color: #999;' }, row.author_email),
+        h('div', { style: 'font-weight: 500;' }, row.github_id || '未记录'),
+        h('div', { style: 'font-size: 12px; color: #999;' }, `ID: ${row.id}`),
       ])
     },
   },
   {
-    title: '内容',
-    key: 'content',
+    title: '文章',
+    key: 'article_slug',
     ellipsis: {
       tooltip: true,
     },
-    width: 300,
-  },
-  {
-    title: '文章',
-    key: 'article',
-    width: 200,
+    width: 240,
     render(row) {
-      return h('span', { style: 'font-size: 13px;' }, row.article_title || '未知文章')
+      return h('span', { style: 'font-size: 13px;' }, row.article_slug || '未关联文章')
     },
   },
   {
@@ -149,13 +141,31 @@ const columns: DataTableColumns = [
     },
   },
   {
+    title: '置顶',
+    key: 'is_pinned',
+    width: 90,
+    render(row) {
+      return row.is_pinned
+        ? h(NTag, {
+            type: 'info',
+            bordered: false,
+            size: 'small',
+          }, {
+            default: () => '已置顶',
+          })
+        : h('span', { style: 'font-size: 13px; color: #999;' }, '否')
+    },
+  },
+  {
     title: '时间',
     key: 'created_at',
     width: 160,
     render(row) {
-      return h('span', { style: 'font-size: 13px; color: #666;' }, [
-        new Date(row.created_at).toLocaleString('zh-CN'),
-      ])
+      return h(
+        'span',
+        { style: 'font-size: 13px; color: #666;' },
+        row.created_at ? new Date(row.created_at).toLocaleString('zh-CN') : '-'
+      )
     },
   },
   {
@@ -176,10 +186,10 @@ const columns: DataTableColumns = [
         row.status === 'pending' ? h(NButton, {
           size: 'small',
           type: 'warning',
-          onClick: () => handleReplyClick(row),
+          onClick: () => handleReject(row),
         }, {
-          default: () => '回复',
-          icon: () => h(NIcon, { component: ChatbubbleOutline }),
+          default: () => '拒绝',
+          icon: () => h(NIcon, { component: CloseOutline }),
         }) : null,
         h(NButton, {
           size: 'small',
@@ -204,34 +214,17 @@ const handleApprove = async (comment: any) => {
   }
 }
 
-const handleReplyClick = (comment: any) => {
-  currentComment.value = comment
-  replyContent.value = ''
-  showReplyModal.value = true
-}
-
-const handleReply = async () => {
-  if (!replyContent.value) {
-    message.warning('请输入回复内容')
-    return false
-  }
-
+const handleReject = async (comment: Comment) => {
   try {
-    await commentApi.reply(currentComment.value.id, {
-      content: replyContent.value,
-      parent_id: currentComment.value.id,
-    })
-    message.success('回复成功')
-    showReplyModal.value = false
+    await commentApi.reject(comment.id)
+    message.success('已拒绝')
     loadComments()
-    return true
   } catch (error) {
-    message.error('回复失败')
-    return false
+    message.error('操作失败')
   }
 }
 
-const handleDelete = (comment: any) => {
+const handleDelete = (comment: Comment) => {
   deleteComment.value = comment
   showDeleteModal.value = true
 }
@@ -255,18 +248,26 @@ const loadComments = async () => {
   loading.value = true
   try {
     const params: any = {
-      page: 1,
-      limit: 20,
+      page: pagination.page,
+      limit: pagination.pageSize,
     }
     if (filters.status) params.status = filters.status
 
     const response = await commentApi.getList(params)
-    comments.value = response.comments
+    comments.value = response.comments || []
+    pagination.page = response.page || 1
+    pagination.pageSize = response.limit || pagination.pageSize
+    pagination.itemCount = response.total || 0
   } catch (error) {
     message.error('加载评论失败')
   } finally {
     loading.value = false
   }
+}
+
+const handleFilterChange = () => {
+  pagination.page = 1
+  loadComments()
 }
 
 onMounted(() => {

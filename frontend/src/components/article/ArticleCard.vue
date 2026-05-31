@@ -1,6 +1,5 @@
 <template>
   <div class="article-list-item" @click="goToArticle">
-    <div class="article-id">{{ article.id }}</div>
     <div class="article-dot"></div>
     <div class="article-info">
       <h2 class="article-title">{{ article.title }}</h2>
@@ -57,14 +56,6 @@ const publishedDate = computed(() => getArticleDate(props.article))
 
 .article-list-item:active {
   background: rgba(24, 160, 88, 0.08);
-}
-
-.article-id {
-  font-size: 14px;
-  color: #18a058;
-  font-weight: 600;
-  min-width: 32px;
-  text-align: right;
 }
 
 .article-dot {

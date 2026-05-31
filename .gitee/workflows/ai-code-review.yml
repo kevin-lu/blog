@@ -1,0 +1,270 @@
+name: AI Code Review (Gitee)
+
+on:
+  pull_request:
+    branches: [main, master, develop, dev_lzb_v4.0]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ============================================
+  # 阶段 1: 传统静态检查（快速失败）
+  # ============================================
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install flake8 black mypy
+      
+      - name: Lint with flake8
+        continue-on-error: true
+        run: |
+          cd backend
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ --count --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Check formatting with black
+        continue-on-error: true
+        run: |
+          cd backend
+          black --check app/ || true
+      
+      - name: Type check with mypy
+        continue-on-error: true
+        run: |
+          cd backend
+          mypy app/ || true
+      
+      - name: Upload static analysis results
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-results
+          path: backend/
+
+  # ============================================
+  # 阶段 2: 前端检查
+  # ============================================
+  frontend-analysis:
+    name: Frontend Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Lint
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run lint || true
+      
+      - name: Build
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Type check
+        continue-on-error: true
+        run: |
+          cd frontend
+          npx tsc --noEmit
+
+  # ============================================
+  # 阶段 3: AI 深度审查
+  # ============================================
+  ai-deep-review:
+    name: AI Deep Review
+    runs-on: ubuntu-latest
+    needs: [static-analysis, frontend-analysis]
+    
+    outputs:
+      diff_lines: ${{ steps.get_diff.outputs.diff_lines }}
+      diff_files: ${{ steps.get_diff.outputs.diff_files }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Gitee CLI
+        run: |
+          pip install PyGithub requests
+      
+      - name: Get PR diff
+        id: get_diff
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # 获取 PR 的完整 diff
+          # Gitee API: https://gitee.com/api/v5/repos/{owner}/{repo}/pulls/{number}/files
+          curl -H "Authorization: Bearer $GITEE_TOKEN" \
+            "https://gitee.com/api/v5/repos/${{ github.repository }}/pulls/${PR_NUMBER}/files" \
+            -o /tmp/pr-files.json
+          
+          # 获取 diff 内容
+          curl -H "Authorization: Bearer $GITEE_TOKEN" \
+            "https://gitee.com/api/v5/repos/${{ github.repository }}/pulls/${PR_NUMBER}" \
+            -o /tmp/pr-detail.json
+          
+          # 生成简单 diff
+          git diff origin/${{ github.base_ref }}..${{ github.sha }} > /tmp/pr-diff.txt || true
+          echo "diff_lines=$(wc -l < /tmp/pr-diff.txt)" >> $GITHUB_OUTPUT
+          echo "diff_files=$(git diff --name-only origin/${{ github.base_ref }}..${{ github.sha }} | wc -l)" >> $GITHUB_OUTPUT
+      
+      - name: Download static analysis results
+        uses: actions/download-artifact@v4
+        with:
+          name: static-analysis-results
+          path: /tmp/static-analysis
+      
+      - name: AI 深度代码审查
+        id: ai_review
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python .github/scripts/ai_code_review.py \
+            --pr-number $PR_NUMBER \
+            --diff-file /tmp/pr-diff.txt \
+            --static-analysis-dir /tmp/static-analysis \
+            --output-file /tmp/ai-review-result.json \
+            --platform gitee
+      
+      - name: Upload AI review result
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result.json
+      
+      - name: Generate review summary
+        run: |
+          if [ -f /tmp/ai-review-result.json ]; then
+            echo "##  AI 代码审查结果" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/ai-review-result.json | jq -r '.summary' >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================
+  # 阶段 4: 自动评论到 PR
+  # ============================================
+  post-review-comments:
+    name: Post Review Comments
+    runs-on: ubuntu-latest
+    needs: [ai-deep-review]
+    if: always()
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install PyGithub requests
+      
+      - name: Download AI review result
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result
+      
+      - name: Post comprehensive review
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python .github/scripts/post_review_comments.py \
+            --pr-number $PR_NUMBER \
+            --review-file /tmp/ai-review-result/review.json \
+            --create-inline-comments \
+            --platform gitee
+
+  # ============================================
+  # 阶段 5: 自动修复 Critical 问题
+  # ============================================
+  auto-fix-critical-issues:
+    name: Auto-Fix Critical Issues
+    runs-on: ubuntu-latest
+    needs: [ai-deep-review]
+    if: github.event_name == 'pull_request' && needs.ai-deep-review.result == 'success'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Download AI review result
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-review-result
+          path: /tmp/ai-review-result
+      
+      - name: AI 自动修复 Critical 问题
+        id: auto_fix
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python .github/scripts/ai_auto_fix.py \
+            --pr-number $PR_NUMBER \
+            --review-file /tmp/ai-review-result/review.json \
+            --platform gitee
+      
+      - name: Create fix commit
+        if: steps.auto_fix.outputs.has_fixes == 'true'
+        run: |
+          git config --global user.name "AI Code Review Bot"
+          git config --global user.email "ai-bot@gitee.com"
+          git add -A
+          git commit -m "🤖 AI Fix: 自动修复 PR #$PR_NUMBER 的 Critical 问题" || exit 0
+          git push

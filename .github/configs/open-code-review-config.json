@@ -1,0 +1,23 @@
+{
+  "name": "Open Code Review Configuration",
+  "description": "代码规范检查配置",
+  "rules": {
+    "python": {
+      "flake8": true,
+      "black": true,
+      "isort": true,
+      "mypy": true
+    },
+    "javascript": {
+      "eslint": true,
+      "prettier": true
+    }
+  },
+  "threshold": {
+    "blocker": 0,
+    "critical": 0,
+    "major": 10
+  },
+  "report_format": "json",
+  "output_path": "open-code-review-result.json"
+}

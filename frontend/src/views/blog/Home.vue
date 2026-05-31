@@ -22,6 +22,9 @@
           </n-input>
         </div>
 
+        <!-- Tag Filter -->
+        <TagFilter />
+
         <!-- Article List -->
         <ArticleList />
       </div>
@@ -40,6 +43,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { SearchOutline } from '@vicons/ionicons5'
 import ArticleList from '@/components/article/ArticleList.vue'
 import Sidebar from '@/components/article/Sidebar.vue'
+import TagFilter from '@/components/article/TagFilter.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -81,15 +85,15 @@ if (route.query.search) {
 
 .home-content {
   display: block;
-  max-width: 900px;
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0 20px;
 }
 
 @media (min-width: 1200px) {
   .home-content {
     display: grid;
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: 1fr 320px;
     gap: 32px;
   }
 }

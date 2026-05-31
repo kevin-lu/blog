@@ -22,9 +22,9 @@ class Category(db.Model):
     # Relationships
     children = db.relationship('Category', backref=db.backref('parent', remote_side=[id]))
     
-    def to_dict(self):
+    def to_dict(self, include_article_count=False):
         """Convert to dictionary"""
-        return {
+        data = {
             'id': self.id,
             'name': self.name,
             'slug': self.slug,
@@ -32,6 +32,17 @@ class Category(db.Model):
             'sort_order': self.sort_order,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+        
+        if include_article_count:
+            # 统计该分类下的文章数量
+            from app.models.article import Article
+            article_count = Article.query.filter(
+                Article.categories.contains(self),
+                Article.status == 'published'
+            ).count()
+            data['article_count'] = article_count
+        
+        return data
     
     def __repr__(self):
         return f'<Category {self.name}>'

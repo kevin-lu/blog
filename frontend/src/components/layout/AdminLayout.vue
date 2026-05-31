@@ -54,6 +54,9 @@
         <router-view />
       </n-layout-content>
     </n-layout>
+    
+    <!-- AI Chat Floating Component -->
+    <AIChatFloating />
   </n-layout>
 </template>
 
@@ -67,13 +70,17 @@ import {
   NotificationsOutline,
   HomeOutline,
   DocumentTextOutline,
+  FlashOutline,
   GridOutline,
   BookmarksOutline,
   ChatbubbleOutline,
   SettingsOutline,
+  HeartOutline,
   SparklesOutline,
+  CloudDownloadOutline,
 } from '@vicons/ionicons5'
 import UserInfo from '@/components/common/UserInfo.vue'
+import AIChatFloating from '@/components/common/AIChatFloating.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -101,7 +108,7 @@ const menuOptions: MenuOption[] = [
   {
     label: 'AI 改写',
     key: 'admin-ai-generator',
-    icon: renderIcon(SparklesOutline),
+    icon: renderIcon(FlashOutline),
   },
   {
     label: '分类管理',
@@ -122,6 +129,16 @@ const menuOptions: MenuOption[] = [
     label: '站点设置',
     key: 'admin-settings',
     icon: renderIcon(SettingsOutline),
+  },
+  {
+    label: '打赏设置',
+    key: 'admin-donation',
+    icon: renderIcon(HeartOutline),
+  },
+  {
+    label: '自动抓取',
+    key: 'admin-crawler',
+    icon: renderIcon(CloudDownloadOutline),
   },
 ]
 

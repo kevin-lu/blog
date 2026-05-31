@@ -29,10 +29,24 @@
           <n-text depth="3" class="publish-date">
             {{ formatDate(articleDate) }}
           </n-text>
+          <n-text depth="3" class="view-count" v-if="article && article.view_count">
+            <n-icon :component="EyeOutline" size="14" />
+            {{ article.view_count }} 次阅读
+          </n-text>
+          <ArticleLike
+            v-if="article && article.id"
+            :article-id="article.id"
+            :initial-like-count="article.like_count || 0"
+            :initial-liked="false"
+            @update="handleLikeUpdate"
+          />
         </div>
 
         <div class="post-body" v-html="renderedContent"></div>
       </article>
+
+      <!-- Comment Section -->
+      <CommentSection :article-slug="route.params.slug as string" />
     </div>
   </div>
 </template>
@@ -40,11 +54,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowBackOutline } from '@vicons/ionicons5'
+import { ArrowBackOutline, EyeOutline } from '@vicons/ionicons5'
 import type { Article } from '@/types'
-import { articleApi } from '@/api'
+import { articleApi, articleViewApi } from '@/api'
 import { renderArticleContent } from '@/utils/markdown'
 import { formatDate, getArticleDate } from '@/utils/date'
+import CommentSection from './components/CommentSection.vue'
+import ArticleLike from '@/components/article/ArticleLike.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,6 +76,15 @@ const loadArticle = async () => {
     const response = await articleApi.getDetail(route.params.slug as string)
     if (response.success && response.data) {
       article.value = response.data
+      
+      // 增加浏览次数（静默调用，不等待结果）
+      articleViewApi.increment(route.params.slug as string).then(count => {
+        if (article.value) {
+          article.value.view_count = count
+        }
+      }).catch(err => {
+        console.error('Failed to increment view count:', err)
+      })
     } else {
       article.value = null
     }
@@ -68,6 +93,12 @@ const loadArticle = async () => {
     article.value = null
   } finally {
     loading.value = false
+  }
+}
+
+const handleLikeUpdate = (liked: boolean, likeCount: number) => {
+  if (article.value) {
+    article.value.like_count = likeCount
   }
 }
 
@@ -123,11 +154,22 @@ onMounted(() => {
   margin-bottom: 40px;
   padding-bottom: 20px;
   border-bottom: 2px solid rgba(24, 160, 88, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .publish-date {
   font-size: 14px;
   color: #18a058;
+}
+
+.view-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #666;
 }
 
 .post-body {

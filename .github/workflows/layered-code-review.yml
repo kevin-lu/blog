@@ -118,7 +118,18 @@ jobs:
       
       - name: Get PR diff
         run: |
-          git diff origin/${{ github.base_ref }}...${{ github.head_ref }} > pr-diff.txt
+          # 使用 GitHub API 获取 PR diff
+          curl -L \
+            -H "Accept: application/vnd.github.v3.diff" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            > pr-diff.txt
+          
+          # 如果 API 失败，尝试使用 git diff
+          if [ ! -s pr-diff.txt ]; then
+            git fetch origin "${{ github.base_ref }}"
+            git diff "origin/${{ github.base_ref }}...HEAD" > pr-diff.txt || echo "" > pr-diff.txt
+          fi
       
       - name: Run AI comprehensive review
         env:

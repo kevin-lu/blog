@@ -21,3 +21,12 @@ logs
 .env
 .env.*
 !.env.example
+
+# Git worktrees
+.worktrees
+worktrees
+
+.trae
+docs/*
+!docs/code-review/
+openspec

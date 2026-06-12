@@ -3,8 +3,7 @@ Authentication API v1
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from flask_limiter import limiter
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.admin import Admin
 from app.utils.jwt import generate_tokens, get_current_admin
 from datetime import timedelta
@@ -85,7 +84,7 @@ def refresh():
             "access_token": "new JWT access token"
         }
     """
-    admin_id = get_jwt_identity()
+    admin_id = int(get_jwt_identity())
     admin = Admin.query.get(admin_id)
     
     if not admin:
@@ -93,7 +92,7 @@ def refresh():
     
     # Generate new access token
     access_token = create_access_token(
-        identity=admin.id,
+        identity=str(admin.id),
         additional_claims={
             'username': admin.username,
             'role': admin.role

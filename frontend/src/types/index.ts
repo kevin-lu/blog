@@ -23,7 +23,10 @@ export interface Article {
   updatedAt?: string
   categories?: Category[]
   tags?: Tag[]
-  view_count?: number
+  view_count?: number  // 浏览次数
+  uv?: number  // 独立访客数
+  pv?: number  // 页面浏览量
+  like_count?: number  // 点赞数
   comment_count?: number
 }
 
@@ -49,14 +52,17 @@ export interface Tag {
 export interface Comment {
   id: number
   article_slug: string
+  content?: string
+  author_name?: string
+  author_email?: string
+  parent_id?: number | null
+  reply_to?: string | null
   github_id?: string
   status: 'pending' | 'approved' | 'rejected'
   is_pinned: boolean
   created_at: string
-  content?: string
-  author_name?: string
-  author_email?: string
-  parent_id?: number
+  updated_at?: string
+  replies?: Comment[]  // 回复列表
   article_title?: string
 }
 
@@ -87,3 +93,5 @@ export interface ApiResponse<T> {
   message: string
   data: T
 }
+
+export type { DonationSetting, DonationSettingUpdate } from './donation'

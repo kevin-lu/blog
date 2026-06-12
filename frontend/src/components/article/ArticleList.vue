@@ -15,10 +15,10 @@
         :article="article"
       />
 
-      <div class="pagination" v-if="pagination.pages > 1">
+      <div class="pagination" v-if="pagination.total > pagination.limit">
         <n-pagination
           v-model:page="currentPage"
-          v-model:page-size="pageSize"
+          :page-size="pageSize"
           :item-count="pagination.total"
           :page-sizes="[10, 20, 30, 50]"
           show-size-picker
@@ -80,8 +80,9 @@ const loadArticles = async () => {
       total: response.data.total,
       pages: response.data.totalPages,
       page: response.data.page,
-      limit: response.data.pageSize,
+      limit: response.data.pageSize || pageSize.value,
     }
+    pageSize.value = response.data.pageSize || pageSize.value
   } catch (error) {
     console.error('Failed to load articles:', error)
   } finally {

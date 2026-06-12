@@ -40,10 +40,9 @@
           <n-form-item label="站点 Logo">
             <div class="upload-field">
               <n-upload
-                :action="uploadUrl"
-                :headers="uploadHeaders"
+                :custom-request="handleLogoUpload"
                 :show-file-list="false"
-                @finish="handleLogoUpload"
+                accept="image/*"
               >
                 <n-button>
                   <template #icon>
@@ -62,6 +61,35 @@
                   移除
                 </n-button>
               </div>
+            </div>
+          </n-form-item>
+
+          <n-form-item label="站点头像">
+            <div class="upload-field">
+              <div class="avatar-preview">
+                <img
+                  v-if="formData.siteAvatar"
+                  :src="formData.siteAvatar"
+                  alt="站点头像"
+                  class="avatar-preview-image"
+                />
+                <div v-else class="avatar-placeholder">
+                  <n-icon :component="PersonOutline" size="48" />
+                  <n-text depth="3">未上传</n-text>
+                </div>
+              </div>
+              <n-upload
+                :custom-request="handleAvatarUpload"
+                :show-file-list="false"
+                accept="image/*"
+              >
+                <n-button style="width: 100%; margin-top: 12px">
+                  <template #icon>
+                    <n-icon :component="CloudUploadOutline" />
+                  </template>
+                  上传头像
+                </n-button>
+              </n-upload>
             </div>
           </n-form-item>
 
@@ -185,15 +213,138 @@
           </n-form-item>
         </n-form>
       </n-card>
+
+      <!-- About Page Settings -->
+      <n-card title="关于页面设置">
+        <n-divider title-style="margin-top: 0; margin-bottom: 20px;">
+          欢迎模块
+        </n-divider>
+        
+        <n-form
+          :model="formData"
+          label-placement="left"
+          label-width="120px"
+        >
+          <n-form-item label="欢迎标题">
+            <n-input
+              v-model:value="formData.aboutWelcomeTitle"
+              placeholder="例如：欢迎来到我的博客"
+            />
+          </n-form-item>
+
+          <n-form-item label="欢迎内容">
+            <n-input
+              v-model:value="formData.aboutWelcomeContent"
+              type="textarea"
+              placeholder="请输入欢迎内容"
+              :rows="3"
+            />
+          </n-form-item>
+        </n-form>
+
+        <n-divider title-style="margin-top: 0; margin-bottom: 20px;">
+          博主介绍模块
+        </n-divider>
+
+        <n-form
+          :model="formData"
+          label-placement="left"
+          label-width="120px"
+        >
+          <n-form-item label="博主标题">
+            <n-input
+              v-model:value="formData.aboutAuthorTitle"
+              placeholder="例如：关于博主"
+            />
+          </n-form-item>
+
+          <n-form-item label="博主介绍">
+            <n-input
+              v-model:value="formData.aboutAuthorContent"
+              type="textarea"
+              placeholder="请输入博主介绍"
+              :rows="3"
+            />
+          </n-form-item>
+        </n-form>
+
+        <n-divider title-style="margin-top: 0; margin-bottom: 20px;">
+          技术栈模块
+        </n-divider>
+
+        <n-form
+          :model="formData"
+          label-placement="left"
+          label-width="120px"
+        >
+          <n-form-item label="技术栈标题">
+            <n-input
+              v-model:value="formData.aboutTechStackTitle"
+              placeholder="例如：技术栈"
+            />
+          </n-form-item>
+
+          <n-form-item label="技术栈列表">
+            <div class="tech-stack-editor">
+              <n-dynamic-tags
+                v-model:value="formData.aboutTechStackItems"
+                placeholder="输入技术栈后按回车"
+              />
+              <p class="help-text">
+                输入技术栈名称后按回车键添加，例如：Vue.js、React、TypeScript
+              </p>
+            </div>
+          </n-form-item>
+        </n-form>
+
+        <n-divider title-style="margin-top: 0; margin-bottom: 20px;">
+          联系方式模块
+        </n-divider>
+
+        <n-form
+          :model="formData"
+          label-placement="left"
+          label-width="120px"
+        >
+          <n-form-item label="联系方式标题">
+            <n-input
+              v-model:value="formData.aboutContactTitle"
+              placeholder="例如：联系方式"
+            />
+          </n-form-item>
+
+          <n-form-item label="联系邮箱">
+            <n-input
+              v-model:value="formData.aboutContactEmail"
+              placeholder="请输入联系邮箱"
+            />
+          </n-form-item>
+
+          <n-form-item label="GitHub 地址">
+            <n-input
+              v-model:value="formData.aboutContactGithub"
+              placeholder="请输入 GitHub 地址"
+            />
+          </n-form-item>
+
+          <n-form-item label="GitHub 显示文本">
+            <n-input
+              v-model:value="formData.aboutContactGithubLabel"
+              placeholder="例如：GitHub"
+            />
+          </n-form-item>
+        </n-form>
+      </n-card>
     </n-space>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { CloudUploadOutline } from '@vicons/ionicons5'
-import { settingApi } from '@/api'
+import { CloudUploadOutline, PersonOutline } from '@vicons/ionicons5'
+import { settingApi } from '@/api/setting'
+import { resolveServerAssetUrl } from '@/utils/assets'
 
 const message = useMessage()
 const saving = ref(false)
@@ -201,51 +352,127 @@ const saving = ref(false)
 const formRef = ref(null)
 
 const formData = reactive({
+  // Basic Settings
   siteName: '',
   siteDescription: '',
   siteLogo: '',
+  siteAvatar: '',
   siteUrl: '',
   siteKeywords: '',
   ogImage: '',
+  
+  // Social Links
   githubUrl: '',
   twitterUrl: '',
   weiboUrl: '',
   email: '',
+  
+  // About Page Settings
+  aboutWelcomeTitle: '',
+  aboutWelcomeContent: '',
+  aboutAuthorTitle: '',
+  aboutAuthorContent: '',
+  aboutTechStackTitle: '',
+  aboutTechStackItems: [] as string[],
+  aboutContactTitle: '',
+  aboutContactEmail: '',
+  aboutContactGithub: '',
+  aboutContactGithubLabel: '',
+  
+  // Comment Settings
   commentRequireReview: true,
   commentEnabled: true,
 })
 
-const uploadUrl = '/api/v1/upload'
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-}))
-
-const handleLogoUpload = ({ event }: any) => {
-  const response = JSON.parse(event.target.response)
-  formData.siteLogo = response.url
-  message.success('Logo 上传成功')
+const handleLogoUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.siteLogo = resolveServerAssetUrl(result.url)
+    message.success('Logo 上传成功')
+  } catch (error: any) {
+    console.error('[Upload] Logo error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
 }
 
-const handleOgImageUpload = ({ event }: any) => {
-  const response = JSON.parse(event.target.response)
-  formData.ogImage = response.url
-  message.success('OG 图片上传成功')
+const handleAvatarUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.siteAvatar = resolveServerAssetUrl(result.url)
+    message.success('头像上传成功')
+  } catch (error: any) {
+    console.error('[Upload] Avatar error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
+}
+
+const handleOgImageUpload = async ({ file }: { file: any }) => {
+  try {
+    const rawFile = file.file || file
+    const result = await uploadFile(rawFile as File)
+    formData.ogImage = resolveServerAssetUrl(result.url)
+    message.success('OG 图片上传成功')
+  } catch (error: any) {
+    console.error('[Upload] OG Image error:', error)
+    message.error(`上传失败：${error.response?.data?.error || error.message}`)
+  }
+}
+
+const uploadFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', 'image')
+  
+  const response = await fetch('/api/v1/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+    },
+    body: formData,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || '上传失败')
+  }
+  
+  return await response.json()
 }
 
 const handleSave = async () => {
   saving.value = true
   try {
-    const data = {
+    const data: any = {
+      // Basic Settings
       site_name: formData.siteName,
       site_description: formData.siteDescription,
       site_logo: formData.siteLogo,
+      site_avatar: formData.siteAvatar,
       site_url: formData.siteUrl,
       site_keywords: formData.siteKeywords,
       og_image: formData.ogImage,
+      
+      // Social Links
       github_url: formData.githubUrl,
       twitter_url: formData.twitterUrl,
       weibo_url: formData.weiboUrl,
       email: formData.email,
+      
+      // About Page Settings
+      about_welcome_title: formData.aboutWelcomeTitle,
+      about_welcome_content: formData.aboutWelcomeContent,
+      about_author_title: formData.aboutAuthorTitle,
+      about_author_content: formData.aboutAuthorContent,
+      about_tech_stack_title: formData.aboutTechStackTitle,
+      about_tech_stack_items: formData.aboutTechStackItems,
+      about_contact_title: formData.aboutContactTitle,
+      about_contact_email: formData.aboutContactEmail,
+      about_contact_github: formData.aboutContactGithub,
+      about_contact_github_label: formData.aboutContactGithubLabel,
+      
+      // Comment Settings
       comment_require_review: formData.commentRequireReview,
       comment_enabled: formData.commentEnabled,
     }
@@ -264,16 +491,34 @@ const loadSettings = async () => {
     const response = await settingApi.get()
     const settings = response.settings
     Object.assign(formData, {
+      // Basic Settings
       siteName: settings.site_name,
       siteDescription: settings.site_description,
-      siteLogo: settings.site_logo,
+      siteLogo: resolveServerAssetUrl(settings.site_logo) || '',
+      siteAvatar: resolveServerAssetUrl(settings.site_avatar) || '',
       siteUrl: settings.site_url,
       siteKeywords: settings.site_keywords,
-      ogImage: settings.og_image,
+      ogImage: resolveServerAssetUrl(settings.og_image) || '',
+      
+      // Social Links
       githubUrl: settings.github_url,
       twitterUrl: settings.twitter_url,
       weiboUrl: settings.weibo_url,
       email: settings.email,
+      
+      // About Page Settings
+      aboutWelcomeTitle: settings.about_welcome_title,
+      aboutWelcomeContent: settings.about_welcome_content,
+      aboutAuthorTitle: settings.about_author_title,
+      aboutAuthorContent: settings.about_author_content,
+      aboutTechStackTitle: settings.about_tech_stack_title,
+      aboutTechStackItems: settings.about_tech_stack_items || [],
+      aboutContactTitle: settings.about_contact_title,
+      aboutContactEmail: settings.about_contact_email,
+      aboutContactGithub: settings.about_contact_github,
+      aboutContactGithubLabel: settings.about_contact_github_label,
+      
+      // Comment Settings
       commentRequireReview: settings.comment_require_review,
       commentEnabled: settings.comment_enabled,
     })
@@ -320,8 +565,35 @@ onMounted(() => {
 
 .upload-field {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-preview {
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
+  width: 200px;
+  height: 200px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 2px dashed #d9d9d9;
+  margin-bottom: 12px;
+}
+
+.avatar-preview-image {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #999;
 }
 
 .preview {
@@ -333,5 +605,15 @@ onMounted(() => {
 .preview img {
   max-height: 80px;
   border-radius: 4px;
+}
+
+.tech-stack-editor {
+  width: 100%;
+}
+
+.tech-stack-editor .help-text {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #999;
 }
 </style>

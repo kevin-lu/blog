@@ -27,5 +27,37 @@ class SiteSetting(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
     
+    @classmethod
+    def get_settings_dict(cls):
+        """Get all settings as a dictionary with key_name as key"""
+        settings = cls.query.all()
+        return {setting.key_name: setting.key_value for setting in settings}
+    
+    @classmethod
+    def get_value(cls, key_name, default=None):
+        """Get a single setting value by key_name"""
+        setting = cls.query.filter_by(key_name=key_name).first()
+        return setting.key_value if setting else default
+    
+    @classmethod
+    def set_value(cls, key_name, key_value, description=None):
+        """Set or update a setting value"""
+        setting = cls.query.filter_by(key_name=key_name).first()
+        
+        if setting:
+            setting.key_value = key_value
+            if description:
+                setting.description = description
+        else:
+            setting = cls(
+                key_name=key_name,
+                key_value=key_value,
+                description=description
+            )
+            db.session.add(setting)
+        
+        db.session.commit()
+        return setting
+    
     def __repr__(self):
         return f'<SiteSetting {self.key_name}>'

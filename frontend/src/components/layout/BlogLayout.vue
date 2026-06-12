@@ -11,7 +11,6 @@
         <nav class="nav desktop-nav">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/categories" class="nav-link">分类</router-link>
-          <router-link to="/tags" class="nav-link">标签</router-link>
           <router-link to="/about" class="nav-link">关于</router-link>
         </nav>
 
@@ -29,7 +28,6 @@
         <nav v-if="menuOpen" class="mobile-nav">
           <router-link to="/" class="nav-link" @click="menuOpen = false">首页</router-link>
           <router-link to="/categories" class="nav-link" @click="menuOpen = false">分类</router-link>
-          <router-link to="/tags" class="nav-link" @click="menuOpen = false">标签</router-link>
           <router-link to="/about" class="nav-link" @click="menuOpen = false">关于</router-link>
         </nav>
       </transition>
@@ -41,7 +39,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>© 2024 {{ siteName }}. All rights reserved.</p>
+        <p>© 2026 {{ siteName }}. All rights reserved.</p>
       </div>
     </footer>
   </div>
@@ -52,7 +50,7 @@ import { ref, computed } from 'vue'
 import { MenuOutline, CloseOutline } from '@vicons/ionicons5'
 
 const menuOpen = ref(false)
-const siteName = computed(() => '我的博客')
+const siteName = computed(() => '老卢的博客')
 
 const toggleMobileMenu = () => {
   menuOpen.value = !menuOpen.value

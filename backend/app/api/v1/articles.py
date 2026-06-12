@@ -1,21 +1,74 @@
 """
 Articles API v1
 """
+import threading
+from datetime import datetime, timezone
+from html import unescape
+import re
+import logging
+
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required
-from flask_limiter import limiter
-from app.extensions import db
-from app.models.article import Article, ArticleCategory, ArticleTag
+from flask_jwt_extended import jwt_required, verify_jwt_in_request, get_jwt_identity
+from app.extensions import db, limiter
+from app.models.article import Article
 from app.models.category import Category
 from app.models.tag import Tag
-from app.utils.jwt import get_current_admin
-from datetime import datetime
+from app.models.like import ArticleLike
+from app.services.ai_rewrite import slugify, process_rewrite_task
+from app.services.ai_tasks import create_task, get_task, list_tasks, clear_finished_tasks
+from app.services.wechat_album_scraper import WechatAlbumScraper
+from app.services.ai_queue import enqueue_article
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('articles', __name__)
 
 
+def parse_datetime_value(value):
+    """Parse ISO strings or timestamps into naive UTC datetimes."""
+    if value in (None, ''):
+        return None
+    if isinstance(value, (int, float)):
+        timestamp = value / 1000 if value > 10_000_000_000 else value
+        return datetime.utcfromtimestamp(timestamp)
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            if normalized.endswith('Z'):
+                normalized = normalized[:-1] + '+00:00'
+            parsed = datetime.fromisoformat(normalized)
+            if parsed.tzinfo:
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            return None
+    return None
+
+
+def summarize_description(content, fallback='', limit=200):
+    if fallback:
+        return fallback[:limit]
+    text = re.sub(r'<[^>]+>', ' ', content or '')
+    text = unescape(re.sub(r'\s+', ' ', text)).strip()
+    return text[:limit]
+
+
+def build_article_slug(raw_slug, title, existing_article=None):
+    base = slugify(raw_slug or title or '') or 'article'
+    candidate = base
+    counter = 1
+    while True:
+        found = Article.query.filter_by(slug=candidate).first()
+        if not found or (existing_article and found.id == existing_article.id):
+            return candidate
+        counter += 1
+        candidate = f'{base}-{counter}'
+
+
 @bp.route('', methods=['GET'])
-@limiter.limit("30 per minute")
+@limiter.limit("200 per minute")
 def get_articles():
     """
     Get articles list with pagination and filters
@@ -43,6 +96,8 @@ def get_articles():
     tag = request.args.get('tag')
     status = request.args.get('status', 'published')
     search = request.args.get('search')
+    order_by = request.args.get('order_by', 'published_at')
+    order_dir = request.args.get('order_dir', 'desc')
     
     # Build query
     query = Article.query
@@ -72,8 +127,17 @@ def get_articles():
             )
         )
     
-    # Order by published_at desc
-    query = query.order_by(Article.published_at.desc())
+    # Order by field
+    order_map = {
+        'published_at': Article.published_at,
+        'view_count': Article.view_count,
+        'created_at': Article.created_at,
+    }
+    order_field = order_map.get(order_by, Article.published_at)
+    if order_dir == 'asc':
+        query = query.order_by(order_field.asc())
+    else:
+        query = query.order_by(order_field.desc())
     
     # Paginate
     pagination = query.paginate(page=page, per_page=limit, error_out=False)
@@ -99,11 +163,258 @@ def get_article(slug):
             "article": { ...article data... }
         }
     """
-    article = Article.query.filter_by(slug=slug, status='published').first_or_404()
+    is_admin_request = False
+    try:
+        verify_jwt_in_request(optional=True)
+        is_admin_request = get_jwt_identity() is not None
+    except Exception:
+        is_admin_request = False
+
+    query = Article.query.filter_by(slug=slug)
+    if not is_admin_request:
+        query = query.filter_by(status='published')
+
+    article = query.first_or_404()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 200
+
+
+@bp.route('/ai-rewrite', methods=['POST'])
+@jwt_required()
+@limiter.limit(lambda: current_app.config.get('AI_REWRITE_RATE_LIMIT', '30 per minute'))
+def ai_rewrite():
+    """Submit an AI rewrite task."""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    source_url = (data.get('sourceUrl') or '').strip()
+    rewrite_strategy = data.get('rewriteStrategy', 'standard')
+    template_type = data.get('templateType', 'tutorial')
+    auto_publish = bool(data.get('autoPublish', False))
+
+    if not source_url:
+        return jsonify({'error': '请提供文章链接'}), 400
+    if 'mp.weixin.qq.com' not in source_url:
+        return jsonify({'error': '目前仅支持微信公众号文章链接'}), 400
+    if rewrite_strategy not in ('standard', 'deep', 'creative'):
+        return jsonify({'error': '不支持的改写策略'}), 400
+    if template_type not in ('tutorial', 'concept', 'comparison', 'practice'):
+        return jsonify({'error': '不支持的文章模板'}), 400
+    if not current_app.config.get('MINIMAX_API_KEY'):
+        return jsonify({'error': '后端未配置 MINIMAX_API_KEY'}), 400
+
+    task = create_task({
+        'status': 'processing',
+        'progress': 5,
+        'message': '任务已创建，准备抓取原文...',
+        'source_url': source_url,
+        'rewrite_strategy': rewrite_strategy,
+        'template_type': template_type,
+        'auto_publish': auto_publish,
+    })
+
+    app = current_app._get_current_object()
+    worker = threading.Thread(
+        target=process_rewrite_task,
+        args=(app, task['id'], source_url, rewrite_strategy, template_type, auto_publish),
+        daemon=True,
+    )
+    worker.start()
+
+    return jsonify({
+        'task': task,
+    }), 202
+
+
+@bp.route('/ai-progress', methods=['GET'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def ai_progress():
+    """Fetch rewrite task progress or recent task history."""
+    task_id = request.args.get('taskId')
+
+    if task_id:
+        task = get_task(task_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        return jsonify({'task': task}), 200
+
+    return jsonify({
+        'tasks': list_tasks(),
+    }), 200
+
+
+@bp.route('/ai-tasks/clear', methods=['POST'])
+@jwt_required()
+@limiter.limit("10 per hour")
+def clear_ai_tasks():
+    """Clear completed and failed AI tasks from memory."""
+    cleared = clear_finished_tasks()
+    return jsonify({'cleared': cleared}), 200
+
+
+@bp.route('/ai-batch', methods=['POST'])
+@jwt_required()
+@limiter.limit(lambda: current_app.config.get('AI_BATCH_RATE_LIMIT', '10 per hour'))
+def ai_batch_rewrite():
+    """批量提交 AI 改写任务 (串行处理，类似单篇改写)"""
+    from app.services.ai_tasks import create_task
+    from app.services.wechat_album_scraper import WechatAlbumScraper
+    
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Request body is required'}), 400
+
+    source_urls = data.get('sourceUrls', [])
+    album_url = data.get('albumUrl')
+    rewrite_strategy = data.get('rewriteStrategy', 'standard')
+    template_type = data.get('templateType', 'tutorial')
+    auto_publish = bool(data.get('autoPublish', False))
+
+    # 验证参数
+    if not source_urls and not album_url:
+        return jsonify({'error': '请提供文章链接列表或合集链接'}), 400
+
+    if rewrite_strategy not in ('standard', 'deep', 'creative'):
+        return jsonify({'error': '不支持的改写策略'}), 400
+    
+    if template_type not in ('tutorial', 'concept', 'comparison', 'practice'):
+        return jsonify({'error': '不支持的文章模板'}), 400
+
+    if not current_app.config.get('MINIMAX_API_KEY'):
+        return jsonify({'error': '后端未配置 MINIMAX_API_KEY'}), 400
+
+    # 如果是合集链接，先抓取文章列表
+    if album_url:
+        try:
+            scraper = WechatAlbumScraper()
+            articles = scraper.fetch_article_list(album_url)
+            
+            if not articles:
+                return jsonify({'error': '合集中没有找到文章'}), 404
+            
+            source_urls = [article['url'] for article in articles]
+            
+        except Exception as e:
+            return jsonify({'error': f'抓取合集失败：{str(e)}'}), 500
+
+    logger.info(f"批量改写：共 {len(source_urls)} 篇文章，串行处理")
+
+    # 批量创建改写任务 (串行)
+    tasks = []
+    for idx, url in enumerate(source_urls):
+        if not url.strip():
+            continue
+            
+        try:
+            # 创建任务
+            task = create_task({
+                'status': 'pending',
+                'progress': 0,
+                'message': f'排队中 ({idx + 1}/{len(source_urls)})',
+                'source_url': url,
+                'rewrite_strategy': rewrite_strategy,
+                'template_type': template_type,
+                'auto_publish': auto_publish,
+            })
+            
+            tasks.append({
+                'taskId': task['id'],
+                'url': url,
+                'status': 'pending',
+                'progress': 0,
+            })
+            
+            logger.info(f"批量改写任务已创建：{task['id']}, 序号：{idx + 1}/{len(source_urls)}")
+            
+        except Exception as e:
+            logger.error(f"批量改写任务创建失败：{url}, 错误：{e}")
+            tasks.append({
+                'url': url,
+                'status': 'failed',
+                'error': str(e),
+            })
+
+    # 启动后台线程串行处理所有任务
+    app = current_app._get_current_object()
+    
+    def process_all_tasks_serial():
+        """串行处理所有任务"""
+        with app.app_context():
+            for task_info in tasks:
+                try:
+                    task_id = task_info['taskId']
+                    url = task_info['url']
+                    
+                    logger.info(f"开始处理任务：{task_id}, URL: {url}")
+                    
+                    # 调用单篇改写处理函数
+                    process_rewrite_task(
+                        app,
+                        task_id,
+                        url,
+                        rewrite_strategy,
+                        template_type,
+                        auto_publish
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"任务处理失败：{task_info.get('taskId')}, 错误：{e}")
+    
+    # 启动后台线程
+    worker = threading.Thread(
+        target=process_all_tasks_serial,
+        daemon=True,
+    )
+    worker.start()
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'total': len(tasks),
+            'tasks': tasks,
+        },
+    }), 202
+
+
+@bp.route('/album/articles', methods=['GET'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def get_album_articles():
+    """获取微信合集文章列表"""
+    album_url = request.args.get('url')
+    
+    if not album_url:
+        return jsonify({'error': '请提供合集链接'}), 400
+    
+    try:
+        scraper = WechatAlbumScraper()
+        
+        # 抓取合集信息
+        album_info = scraper.fetch_album_info(album_url)
+        
+        # 抓取文章列表
+        articles = scraper.fetch_article_list(album_url)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'album': album_info,
+                'articles': articles,
+            },
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'抓取失败：{str(e)}',
+        }), 500
+
 
 
 @bp.route('', methods=['POST'])
@@ -136,19 +447,32 @@ def create_article():
     # Validate required fields
     if not data.get('title'):
         return jsonify({'error': 'Title is required'}), 400
-    
+
+    slug = build_article_slug(data.get('slug'), data.get('title'))
+
     # Check if slug already exists
-    if Article.query.filter_by(slug=data.get('slug')).first():
+    if Article.query.filter_by(slug=slug).first():
         return jsonify({'error': 'Slug already exists'}), 400
     
     # Create article
     article = Article(
-        slug=data.get('slug'),
+        slug=slug,
         title=data.get('title'),
-        description=data.get('description'),
+        description=data.get('description') or summarize_description(data.get('content'), ''),
+        content=data.get('content'),
         cover_image=data.get('cover_image'),
+        source_url=data.get('source_url'),
+        ai_generated=1 if data.get('ai_generated') else 0,
+        ai_model=data.get('ai_model'),
+        rewrite_strategy=data.get('rewrite_strategy'),
+        template_type=data.get('template_type'),
+        word_count=data.get('word_count'),
+        auto_published=1 if data.get('auto_published') else 0,
         status=data.get('status', 'draft'),
-        published_at=datetime.utcnow() if data.get('status') == 'published' else None
+        published_at=(
+            parse_datetime_value(data.get('published_at')) or datetime.utcnow()
+            if data.get('status') == 'published' else parse_datetime_value(data.get('published_at'))
+        ),
     )
     
     # Set categories
@@ -165,7 +489,7 @@ def create_article():
     db.session.commit()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 201
 
 
@@ -200,14 +524,36 @@ def update_article(slug):
     # Update fields
     if 'title' in data:
         article.title = data['title']
+    if 'slug' in data:
+        article.slug = build_article_slug(data.get('slug'), data.get('title') or article.title, article)
     if 'description' in data:
         article.description = data['description']
+    elif 'content' in data and not article.description:
+        article.description = summarize_description(data.get('content'), article.description or '')
+    if 'content' in data:
+        article.content = data['content']
     if 'cover_image' in data:
         article.cover_image = data['cover_image']
+    if 'source_url' in data:
+        article.source_url = data['source_url']
+    if 'ai_generated' in data:
+        article.ai_generated = 1 if data.get('ai_generated') else 0
+    if 'ai_model' in data:
+        article.ai_model = data.get('ai_model')
+    if 'rewrite_strategy' in data:
+        article.rewrite_strategy = data.get('rewrite_strategy')
+    if 'template_type' in data:
+        article.template_type = data.get('template_type')
+    if 'word_count' in data:
+        article.word_count = data.get('word_count')
+    if 'auto_published' in data:
+        article.auto_published = 1 if data.get('auto_published') else 0
     if 'status' in data:
         article.status = data['status']
         if data['status'] == 'published' and not article.published_at:
             article.published_at = datetime.utcnow()
+    if 'published_at' in data:
+        article.published_at = parse_datetime_value(data.get('published_at'))
     
     # Update categories
     if 'category_ids' in data:
@@ -223,13 +569,13 @@ def update_article(slug):
     db.session.commit()
     
     return jsonify({
-        'article': article.to_dict()
+        'article': article.to_dict(include_content=True)
     }), 200
 
 
 @bp.route('/<slug>', methods=['DELETE'])
 @jwt_required()
-@limiter.limit("5 per hour")
+@limiter.limit("30 per minute")
 def delete_article(slug):
     """
     Delete article (requires authentication)
@@ -239,11 +585,208 @@ def delete_article(slug):
             "message": "Article deleted successfully"
         }
     """
+    from app.models.crawler import AIQueue
+    from app.models.article import ArticleCategory, ArticleTag
+    from app.models.comment import Comment
+    
     article = Article.query.filter_by(slug=slug).first_or_404()
     
+    # 先删除所有关联数据，避免外键约束错误
+    # 1. 删除 AI 队列记录
+    AIQueue.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 2. 删除分类关联
+    ArticleCategory.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 3. 删除标签关联
+    ArticleTag.query.filter_by(article_id=article.id).delete(synchronize_session=False)
+    
+    # 4. 删除评论
+    Comment.query.filter_by(article_slug=slug).delete(synchronize_session=False)
+    
+    # 5. 删除文章
     db.session.delete(article)
     db.session.commit()
     
     return jsonify({
         'message': 'Article deleted successfully'
+    }), 200
+
+
+@bp.route('/<slug>/view', methods=['POST'])
+@limiter.limit("100 per hour")
+def increment_view_count(slug):
+    """
+    增加文章浏览次数
+    
+    防刷策略：
+    - 同一 IP 在 24 小时内只计一次
+    - 使用数据库持久化记录访问日志
+    
+    Returns:
+        {
+            "success": true,
+            "view_count": 1234
+        }
+    """
+    from datetime import datetime, timedelta
+    from app.models.article_visit import ArticleVisit
+    
+    article = Article.query.filter_by(slug=slug).first()
+    if not article:
+        return jsonify({'success': False, 'error': 'Article not found'}), 404
+    
+    # 获取客户端 IP
+    def get_client_ip():
+        if request.headers.get('X-Forwarded-For'):
+            return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+        return request.remote_addr or '127.0.0.1'
+    
+    client_ip = get_client_ip()
+    user_agent = request.headers.get('User-Agent', '')
+    
+    # 检查 24 小时内是否已访问（使用数据库持久化）
+    twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+    existing_visit = ArticleVisit.query.filter(
+        ArticleVisit.article_id == article.id,
+        ArticleVisit.ip_address == client_ip,
+        ArticleVisit.visited_at >= twenty_four_hours_ago
+    ).first()
+    
+    if existing_visit:
+        # 已访问过，不增加计数，但返回当前浏览次数
+        return jsonify({
+            'success': True,
+            'view_count': article.view_count or 0,
+            'cached': True
+        })
+    
+    # 增加浏览次数
+    article.view_count = (article.view_count or 0) + 1
+    
+    # 创建访问记录
+    visit = ArticleVisit(
+        article_id=article.id,
+        article_slug=slug,
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    db.session.add(visit)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'view_count': article.view_count
+    }), 200
+
+
+@bp.route('/<int:id>/like', methods=['POST'])
+@limiter.limit("10 per minute", key_func=lambda: request.remote_addr)
+@jwt_required(optional=True)
+def like_article(id):
+    """
+    Like an article
+    
+    Supports both authenticated and anonymous users.
+    For authenticated users: uses user_id
+    For anonymous users: uses session_id + IP address
+    
+    Returns:
+        - 200: Success
+        - 404: Article not found
+        - 409: Already liked
+        - 429: Rate limit exceeded
+    """
+    # Find article
+    article = Article.query.get(id)
+    if not article:
+        return jsonify({'error': 'Article not found'}), 404
+    
+    # Get user info
+    try:
+        user_id = get_jwt_identity()
+    except:
+        user_id = None
+    
+    session_id = request.headers.get('X-Session-ID', request.remote_addr)
+    ip_address = request.remote_addr
+    
+    # Check if already liked
+    if user_id:
+        existing = ArticleLike.query.filter_by(article_id=id, user_id=user_id).first()
+    else:
+        existing = ArticleLike.query.filter_by(article_id=id, session_id=session_id).first()
+    
+    if existing:
+        return jsonify({
+            'error': 'Already liked',
+            'message': '您已点赞过这篇文章'
+        }), 409
+    
+    # Create like record
+    like = ArticleLike(
+        article_id=id,
+        user_id=user_id,
+        session_id=session_id if not user_id else None,
+        ip_address=ip_address
+    )
+    db.session.add(like)
+    db.session.commit()
+    
+    # Get updated like count
+    like_count = article.likes.count()
+    
+    return jsonify({
+        'success': True,
+        'like_count': like_count,
+        'liked': True
+    }), 200
+
+
+@bp.route('/<int:id>/unlike', methods=['DELETE'])
+@jwt_required(optional=True)
+def unlike_article(id):
+    """
+    Unlike an article
+    
+    Returns:
+        - 200: Success
+        - 404: Article not found or like not found
+    """
+    # Find article
+    article = Article.query.get(id)
+    if not article:
+        return jsonify({'error': 'Article not found'}), 404
+    
+    # Get user info
+    try:
+        user_id = get_jwt_identity()
+    except:
+        user_id = None
+    
+    session_id = request.headers.get('X-Session-ID', request.remote_addr)
+    
+    # Find and delete like record
+    if user_id:
+        like = ArticleLike.query.filter_by(article_id=id, user_id=user_id).first()
+    else:
+        like = ArticleLike.query.filter_by(article_id=id, session_id=session_id).first()
+    
+    if not like:
+        return jsonify({
+            'error': 'Like not found',
+            'message': '您未点赞过这篇文章'
+        }), 404
+    
+    db.session.delete(like)
+    db.session.commit()
+    
+    # Get updated like count
+    like_count = article.likes.count()
+    
+    return jsonify({
+        'success': True,
+        'like_count': like_count,
+        'liked': False
     }), 200

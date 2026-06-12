@@ -1,0 +1,206 @@
+name: Code Review
+
+on:
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [main, master]
+
+jobs:
+  backend-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install flake8 black mypy pytest
+      
+      - name: Lint with flake8
+        run: |
+          cd backend
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ --count --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Check formatting with black
+        run: |
+          cd backend
+          black --check app/
+      
+      - name: Type check with mypy
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports
+      
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/ -v --tb=short
+
+  frontend-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Type check
+        run: |
+          cd frontend
+          npx tsc --noEmit
+
+  code-climate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Code Climate
+        uses: codeclimate/codeclimate@master
+        env:
+          CODECLIMATE_API_HOST: https://codeclimate.com
+          CODECLIMATE_REPO_TOKEN: ${{ secrets.CODECLIMATE_REPO_TOKEN }}
+
+  codex-cli-review:
+    name: Codex CLI AI Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+      
+      - name: Configure Codex CLI
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "Configuring Codex CLI..."
+          # Codex CLI will use OPENAI_API_KEY from environment
+      
+      - name: Get merge diff
+        run: |
+          git diff origin/${{ github.base_ref }}..${{ github.sha }} > /tmp/merge-diff.txt
+          echo "Diff file created with $(wc -l < /tmp/merge-diff.txt) lines"
+      
+      - name: Run Codex CLI Review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          codex --full-auto exec "
+          Review this merge diff thoroughly:
+          $(cat /tmp/merge-diff.txt)
+          
+          Focus on:
+          1. Merge conflict resolution quality
+          2. Code correctness and logic errors
+          3. Security vulnerabilities
+          4. Performance issues
+          5. Breaking changes
+          
+          Provide structured report with severity levels and verdict.
+          Be strict and thorough.
+          " --output codex-review-result.json
+      
+      - name: Upload Review Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: codex-review-report
+          path: codex-review-result.json
+      
+      - name: Parse Review Results
+        run: |
+          echo "## Codex CLI Review Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f codex-review-result.json ]; then
+            SUMMARY=$(cat codex-review-result.json | grep -i "summary" | head -1)
+            VERDICT=$(cat codex-review-result.json | grep -i "verdict" | head -1)
+            
+            echo "### Summary" >> $GITHUB_STEP_SUMMARY
+            echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Verdict" >> $GITHUB_STEP_SUMMARY
+            echo "$VERDICT" >> $GITHUB_STEP_SUMMARY
+            
+            # Check for critical issues
+            if cat codex-review-result.json | grep -qi '"severity": "critical"'; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ **CRITICAL ISSUES FOUND** - Please review and fix ASAP" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "Review report not found" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Post Comment on PR
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            let summary = "## 🤖 Codex CLI Code Review Results\n\n";
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('codex-review-result.json', 'utf8'));
+              summary += `**Summary**: ${report.summary || 'N/A'}\n\n`;
+              summary += `**Verdict**: ${report.verdict || 'N/A'}\n\n`;
+              
+              if (report.issues && report.issues.length > 0) {
+                summary += "### Issues Found\n\n";
+                report.issues.forEach((issue, index) => {
+                  summary += `#### ${index + 1}. ${issue.issue || 'Issue'}\n`;
+                  summary += `- **Severity**: ${issue.severity || 'N/A'}\n`;
+                  summary += `- **File**: ${issue.file || 'N/A'}:${issue.line || 'N/A'}\n`;
+                  summary += `- **Fix**: ${issue.fix || 'N/A'}\n\n`;
+                });
+              }
+              
+              // Check for critical issues
+              const hasCritical = report.issues && report.issues.some(i => i.severity === 'critical');
+              if (hasCritical) {
+                summary += "\n⚠️ **CRITICAL ISSUES FOUND** - Please review and fix ASAP\n";
+              }
+            } catch (error) {
+              summary += "Failed to parse review results.\n";
+            }
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: summary
+            });

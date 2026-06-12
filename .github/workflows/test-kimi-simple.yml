@@ -1,0 +1,51 @@
+name: Test Kimi API (Simple)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-kimi-simple:
+    name: Test Kimi API Simple
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Check Secrets
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+        run: |
+          echo "=== Checking Secrets ==="
+          if [ -z "$LLM_API_KEY" ]; then
+            echo "ERROR: LLM_API_KEY is not set"
+            exit 1
+          else
+            echo "SUCCESS: LLM_API_KEY is set"
+            echo "Prefix: ${LLM_API_KEY:0:15}..."
+          fi
+          
+          if [ -z "$LLM_API_URL" ]; then
+            echo "ERROR: LLM_API_URL is not set"
+            exit 1
+          else
+            echo "SUCCESS: LLM_API_URL is set: $LLM_API_URL"
+          fi
+      
+      - name: Test Kimi API
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL || 'moonshot-v1-8k' }}
+        run: |
+          echo "=== Testing Kimi API ==="
+          
+          curl -X POST "$LLM_API_URL" \
+            -H "Authorization: Bearer $LLM_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"$LLM_MODEL\",
+              \"messages\": [{\"role\": \"user\", \"content\": \"Hello Kimi!\"}]
+            }" \
+            -w "\nHTTP Status: %{http_code}\n"

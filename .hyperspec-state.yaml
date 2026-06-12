@@ -1,7 +1,7 @@
 version: 1
-active_change: add-article-like
+active_change: add-homepage-hero
 phase: propose
-checkpoint: plan-generated
+checkpoint: openspec-generated
 project_profile:
   languages: [python, javascript, typescript]
   frameworks: [flask, vue3]

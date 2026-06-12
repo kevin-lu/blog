@@ -1,5 +1,6 @@
 <template>
   <div class="home-page">
+    <HeroSection />
     <div class="home-content">
       <div class="main-content">
         <!-- Search Bar -->
@@ -26,7 +27,9 @@
         <TagFilter />
 
         <!-- Article List -->
-        <ArticleList />
+        <div id="article-list">
+          <ArticleList />
+        </div>
       </div>
 
       <!-- Sidebar -->
@@ -41,6 +44,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { SearchOutline } from '@vicons/ionicons5'
+import HeroSection from '@/components/blog/HeroSection.vue'
 import ArticleList from '@/components/article/ArticleList.vue'
 import Sidebar from '@/components/article/Sidebar.vue'
 import TagFilter from '@/components/article/TagFilter.vue'

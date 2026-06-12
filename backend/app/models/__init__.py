@@ -11,6 +11,7 @@ from .operation_log import OperationLog
 from .donation import DonationSetting
 from .crawler import CrawledURL, CrawledTitle, CrawlerTask, AIQueue, ScheduledJobLog
 from .like import ArticleLike
+from .article_visit import ArticleVisit
 
 __all__ = [
     'Admin',
@@ -29,4 +30,5 @@ __all__ = [
     'AIQueue',
     'ScheduledJobLog',
     'ArticleLike',
+    'ArticleVisit',
 ]

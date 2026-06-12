@@ -24,4 +24,16 @@ body {
   --primary-light: #34c88a;
   --bg-gradient-start: #f0f9f4;
   --bg-gradient-end: #e6f5ed;
+  
+  /* Hero Section 主题色 */
+  --hero-primary: #18a058;
+  --hero-primary-light: #34d399;
+  --hero-primary-dark: #059669;
+  --hero-accent: #00ff88;
+  --hero-accent-glow: rgba(0, 255, 136, 0.5);
+  --hero-gradient-start: #0f172a;
+  --hero-gradient-middle: #1e293b;
+  --hero-gradient-end: #0f172a;
+  --hero-text-primary: #ffffff;
+  --hero-text-secondary: #94a3b8;
 }
